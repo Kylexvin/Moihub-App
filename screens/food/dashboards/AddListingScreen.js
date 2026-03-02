@@ -12,9 +12,11 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
+import theme from '../../theme/Theme';
 
 const baseURL = Platform.OS === 'ios' 
   ? 'http://localhost:5000' 
@@ -55,14 +57,12 @@ const AddListingScreen = ({ navigation }) => {
   const [showCategories, setShowCategories] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Handle input changes
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
     
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({
         ...prev,
@@ -71,7 +71,6 @@ const AddListingScreen = ({ navigation }) => {
     }
   };
 
-  // Validate form
   const validateForm = () => {
     const newErrors = {};
 
@@ -101,7 +100,6 @@ const AddListingScreen = ({ navigation }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Pick image from gallery
   const pickImage = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -130,7 +128,6 @@ const AddListingScreen = ({ navigation }) => {
     }
   };
 
-  // Take photo with camera
   const takePhoto = async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -158,31 +155,35 @@ const AddListingScreen = ({ navigation }) => {
     }
   };
 
-  // Show image picker options
   const showImagePickerOptions = () => {
     Alert.alert(
       'Select Image',
       'Choose how you want to add an image',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Camera', onPress: takePhoto },
-        { text: 'Gallery', onPress: pickImage },
+        { 
+          text: '📷 Camera', 
+          onPress: takePhoto,
+          style: 'default'
+        },
+        { 
+          text: '🖼️ Gallery', 
+          onPress: pickImage,
+          style: 'default'
+        },
       ]
     );
   };
 
-  // Remove selected image
   const removeImage = () => {
     setSelectedImage(null);
   };
 
-  // Select category
   const selectCategory = (category) => {
     handleInputChange('category', category);
     setShowCategories(false);
   };
 
-  // Submit form
   const handleSubmit = async () => {
     if (!validateForm()) {
       return;
@@ -191,14 +192,12 @@ const AddListingScreen = ({ navigation }) => {
     setLoading(true);
 
     try {
-      // Create FormData
       const formDataToSend = new FormData();
       formDataToSend.append('name', formData.name.trim());
       formDataToSend.append('price', formData.price.trim());
       formDataToSend.append('description', formData.description.trim());
       formDataToSend.append('category', formData.category.trim());
       
-      // Add image
       formDataToSend.append('image', {
         uri: selectedImage.uri,
         type: 'image/jpeg',
@@ -217,12 +216,12 @@ const AddListingScreen = ({ navigation }) => {
 
       if (response.data.success) {
         Alert.alert(
-          'Success',
-          'Listing created successfully!',
+          '🎉 Success!',
+          'Your listing has been created successfully.',
           [
             {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
+              text: 'View Listings',
+              onPress: () => navigation.navigate('Listings'),
             },
           ]
         );
@@ -241,212 +240,445 @@ const AddListingScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Add New Listing</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Image Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Photo</Text>
+    <LinearGradient colors={theme.Gradients.dark} style={styles.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {/* Header */}
+        <View style={styles.header}>
           <TouchableOpacity
-            style={[styles.imageContainer, errors.image && styles.inputError]}
-            onPress={showImagePickerOptions}
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
           >
-            {selectedImage ? (
-              <View style={styles.selectedImageContainer}>
-                <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
-                <TouchableOpacity
-                  style={styles.removeImageButton}
-                  onPress={removeImage}
-                >
-                  <Ionicons name="close-circle" size={24} color="#f44336" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Ionicons name="camera" size={48} color="#ccc" />
-                <Text style={{ color: '#999', marginTop: 8 }}>Tap to add image</Text>
+            <LinearGradient
+              colors={['rgba(80, 200, 120, 0.1)', 'rgba(8, 48, 40, 0.2)']}
+              style={styles.backButtonGradient}
+            >
+              <Ionicons name="arrow-back" size={22} color={theme.Colors.primary} />
+            </LinearGradient>
+          </TouchableOpacity>
+          <Text style={styles.title}>Add New Listing</Text>
+          <View style={styles.placeholder} />
+        </View>
+
+        <ScrollView 
+          style={styles.content} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.contentContainer}
+        >
+          {/* Image Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="image" size={18} color={theme.Colors.primary} />
+              <Text style={styles.sectionTitle}>Product Photo</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.imageContainer, errors.image && styles.inputError]}
+              onPress={showImagePickerOptions}
+              activeOpacity={0.8}
+            >
+              {selectedImage ? (
+                <View style={styles.selectedImageContainer}>
+                  <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
+                  <TouchableOpacity
+                    style={styles.removeImageButton}
+                    onPress={removeImage}
+                  >
+                    <LinearGradient
+                      colors={[theme.Colors.danger, theme.Colors.danger + '80']}
+                      style={styles.removeImageGradient}
+                    >
+                      <Ionicons name="close" size={16} color={theme.Colors.white} />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.5)']}
+                    style={styles.imageOverlay}
+                  >
+                    <Text style={styles.imageOverlayText}>Tap to change</Text>
+                  </LinearGradient>
+                </View>
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <View style={styles.imagePlaceholderIcon}>
+                    <Ionicons name="cloud-upload" size={40} color={theme.Colors.primary} />
+                  </View>
+                  <Text style={styles.imagePlaceholderText}>Tap to add image</Text>
+                  <Text style={styles.imagePlaceholderSubtext}>JPG, PNG up to 5MB</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {errors.image && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color={theme.Colors.danger} />
+                <Text style={styles.errorText}>{errors.image}</Text>
               </View>
             )}
-          </TouchableOpacity>
-          {errors.image && <Text style={styles.errorText}>{errors.image}</Text>}
-        </View>
+          </View>
 
-        {/* Name */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            style={[styles.input, errors.name && styles.inputError]}
-            placeholder="e.g. Beef Burger"
-            value={formData.name}
-            onChangeText={value => handleInputChange('name', value)}
-          />
-          {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-        </View>
-
-        {/* Price */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Price</Text>
-          <TextInput
-            style={[styles.input, errors.price && styles.inputError]}
-            placeholder="e.g. 350"
-            keyboardType="numeric"
-            value={formData.price}
-            onChangeText={value => handleInputChange('price', value)}
-          />
-          {errors.price && <Text style={styles.errorText}>{errors.price}</Text>}
-        </View>
-
-        {/* Description */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={[styles.textarea, errors.description && styles.inputError]}
-            placeholder="Add some details..."
-            value={formData.description}
-            onChangeText={value => handleInputChange('description', value)}
-            multiline
-            numberOfLines={4}
-          />
-          {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
-        </View>
-
-        {/* Category */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Category</Text>
-          <TouchableOpacity
-            style={[styles.input, errors.category && styles.inputError]}
-            onPress={() => setShowCategories(!showCategories)}
-          >
-            <Text style={{ color: formData.category ? '#000' : '#aaa' }}>
-              {formData.category || 'Select a category'}
-            </Text>
-          </TouchableOpacity>
-          {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
-          {showCategories && (
-            <View style={styles.dropdown}>
-              <ScrollView style={{ maxHeight: 200 }}>
-                {FOOD_CATEGORIES.map(cat => (
-                  <TouchableOpacity
-                    key={cat}
-                    style={styles.dropdownItem}
-                    onPress={() => selectCategory(cat)}
-                  >
-                    <Text>{cat}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+          {/* Name */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="restaurant" size={18} color={theme.Colors.primary} />
+              <Text style={styles.sectionTitle}>Name</Text>
             </View>
-          )}
-        </View>
+            <View style={[styles.inputWrapper, errors.name && styles.inputErrorWrapper]}>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Beef Burger"
+                placeholderTextColor={theme.Colors.textTertiary}
+                value={formData.name}
+                onChangeText={value => handleInputChange('name', value)}
+              />
+            </View>
+            {errors.name && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color={theme.Colors.danger} />
+                <Text style={styles.errorText}>{errors.name}</Text>
+              </View>
+            )}
+          </View>
 
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={styles.submitButton}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>Submit</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Price */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="pricetag" size={18} color={theme.Colors.primary} />
+              <Text style={styles.sectionTitle}>Price</Text>
+            </View>
+            <View style={[styles.inputWrapper, errors.price && styles.inputErrorWrapper]}>
+              <Text style={styles.currencySymbol}>KSh</Text>
+              <TextInput
+                style={[styles.input, styles.priceInput]}
+                placeholder="0.00"
+                placeholderTextColor={theme.Colors.textTertiary}
+                keyboardType="numeric"
+                value={formData.price}
+                onChangeText={value => handleInputChange('price', value)}
+              />
+            </View>
+            {errors.price && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color={theme.Colors.danger} />
+                <Text style={styles.errorText}>{errors.price}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Description */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="document-text" size={18} color={theme.Colors.primary} />
+              <Text style={styles.sectionTitle}>Description</Text>
+            </View>
+            <View style={[styles.inputWrapper, errors.description && styles.inputErrorWrapper]}>
+              <TextInput
+                style={[styles.input, styles.textarea]}
+                placeholder="Describe your dish... ingredients, preparation, etc."
+                placeholderTextColor={theme.Colors.textTertiary}
+                value={formData.description}
+                onChangeText={value => handleInputChange('description', value)}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+            {errors.description && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color={theme.Colors.danger} />
+                <Text style={styles.errorText}>{errors.description}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Category */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="apps" size={18} color={theme.Colors.primary} />
+              <Text style={styles.sectionTitle}>Category</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.inputWrapper, styles.categorySelector, errors.category && styles.inputErrorWrapper]}
+              onPress={() => setShowCategories(!showCategories)}
+              activeOpacity={0.7}
+            >
+              <Text style={formData.category ? styles.selectedCategoryText : styles.placeholderText}>
+                {formData.category || 'Select a category'}
+              </Text>
+              <Ionicons 
+                name={showCategories ? 'chevron-up' : 'chevron-down'} 
+                size={20} 
+                color={theme.Colors.textSecondary} 
+              />
+            </TouchableOpacity>
+            {errors.category && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color={theme.Colors.danger} />
+                <Text style={styles.errorText}>{errors.category}</Text>
+              </View>
+            )}
+            
+            {/* Categories Dropdown */}
+            {showCategories && (
+              <LinearGradient
+                colors={['rgba(255,255,255,0.03)', 'rgba(255,255,255,0.01)']}
+                style={styles.dropdown}
+              >
+                <ScrollView style={styles.dropdownScroll} showsVerticalScrollIndicator={false}>
+                  {FOOD_CATEGORIES.map((cat, index) => (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.dropdownItem,
+                        index === FOOD_CATEGORIES.length - 1 && styles.dropdownItemLast
+                      ]}
+                      onPress={() => selectCategory(cat)}
+                    >
+                      <Text style={styles.dropdownItemText}>{cat}</Text>
+                      {formData.category === cat && (
+                        <Ionicons name="checkmark" size={18} color={theme.Colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </LinearGradient>
+            )}
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[theme.Colors.primary, theme.Colors.primaryDark]}
+              style={styles.submitButtonGradient}
+            >
+              {loading ? (
+                <ActivityIndicator color={theme.Colors.black} />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color={theme.Colors.black} />
+                  <Text style={styles.submitButtonText}>Create Listing</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Bottom Spacing */}
+          <View style={{ height: 20 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: '#f4f4f4',
+    paddingHorizontal: theme.Spacing.lg,
+    paddingVertical: theme.Spacing.md,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.Colors.cardBorder,
   },
-  backButton: { padding: 8 },
-  title: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-  placeholder: { width: 24 },
-  content: { padding: 16 },
-  section: { marginBottom: 16 },
-  sectionTitle: { fontWeight: 'bold', fontSize: 16, marginBottom: 8 },
-  imageContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 16,
+  backButton: {
+    borderRadius: theme.BorderRadius.round,
+    overflow: 'hidden',
+  },
+  backButtonGradient: {
+    padding: theme.Spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 200,
-    backgroundColor: '#fafafa'
   },
-  imagePlaceholder: { alignItems: 'center' },
-  selectedImageContainer: { position: 'relative' },
-  selectedImage: { width: '100%', height: 200, borderRadius: 8 },
-  removeImageButton: { position: 'absolute', top: 8, right: 8 },
-  label: { fontWeight: 'bold', marginBottom: 4 },
-  input: {
+  title: {
+    ...theme.Typography.h3,
+  },
+  placeholder: {
+    width: 40,
+  },
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: theme.Spacing.lg,
+  },
+  section: {
+    marginBottom: theme.Spacing.lg,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.Spacing.xs,
+    marginBottom: theme.Spacing.sm,
+  },
+  sectionTitle: {
+    ...theme.Typography.body,
+    color: theme.Colors.textSecondary,
+  },
+  imageContainer: {
+    ...theme.Components.card,
+    padding: 0,
+    overflow: 'hidden',
+    minHeight: 200,
+  },
+  imagePlaceholder: {
+    padding: theme.Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imagePlaceholderIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(80, 200, 120, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.Spacing.md,
+  },
+  imagePlaceholderText: {
+    ...theme.Typography.body,
+    marginBottom: theme.Spacing.xs,
+  },
+  imagePlaceholderSubtext: {
+    ...theme.Typography.caption,
+    color: theme.Colors.textTertiary,
+  },
+  selectedImageContainer: {
+    position: 'relative',
+  },
+  selectedImage: {
+    width: '100%',
+    height: 200,
+  },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 50,
+    justifyContent: 'flex-end',
+    padding: theme.Spacing.sm,
+  },
+  imageOverlayText: {
+    ...theme.Typography.caption,
+    color: theme.Colors.white,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: theme.Spacing.sm,
+    right: theme.Spacing.sm,
+    borderRadius: theme.BorderRadius.round,
+    overflow: 'hidden',
+  },
+  removeImageGradient: {
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: theme.BorderRadius.md,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    borderColor: theme.Colors.cardBorder,
+    paddingHorizontal: theme.Spacing.md,
+  },
+  inputErrorWrapper: {
+    borderColor: theme.Colors.danger,
+  },
+  input: {
+    flex: 1,
+    ...theme.Typography.body,
+    paddingVertical: theme.Spacing.md,
+    color: theme.Colors.text,
+  },
+  priceInput: {
+    marginLeft: theme.Spacing.xs,
+  },
+  currencySymbol: {
+    ...theme.Typography.body,
+    color: theme.Colors.primary,
+    fontWeight: '600',
   },
   textarea: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    height: 100
+    minHeight: 100,
+    textAlignVertical: 'top',
   },
-  inputError: {
-    borderColor: '#f44336'
+  categorySelector: {
+    justifyContent: 'space-between',
   },
-  errorText: {
-    color: '#f44336',
-    marginTop: 4,
-    fontSize: 13
+  placeholderText: {
+    ...theme.Typography.body,
+    color: theme.Colors.textTertiary,
+  },
+  selectedCategoryText: {
+    ...theme.Typography.body,
+    color: theme.Colors.text,
   },
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    marginTop: 8,
-    backgroundColor: '#fff'
+    marginTop: theme.Spacing.xs,
+    ...theme.Components.card,
+    maxHeight: 250,
+    padding: 0,
+    overflow: 'hidden',
+  },
+  dropdownScroll: {
+    maxHeight: 250,
   },
   dropdownItem: {
-    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee'
+    borderBottomColor: theme.Colors.cardBorder,
+  },
+  dropdownItemLast: {
+    borderBottomWidth: 0,
+  },
+  dropdownItemText: {
+    ...theme.Typography.body,
+    color: theme.Colors.text,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.Spacing.xs,
+    marginTop: theme.Spacing.xs,
+  },
+  errorText: {
+    ...theme.Typography.caption,
+    color: theme.Colors.danger,
+  },
+  inputError: {
+    borderColor: theme.Colors.danger,
   },
   submitButton: {
-    backgroundColor: '#4caf50',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center'
+    borderRadius: theme.BorderRadius.md,
+    overflow: 'hidden',
+    marginTop: theme.Spacing.md,
+  },
+  submitButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.Spacing.md,
+    gap: theme.Spacing.sm,
   },
   submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold'
-  }
+    ...theme.Typography.button,
+    color: theme.Colors.black,
+  },
 });
 
 export default AddListingScreen;

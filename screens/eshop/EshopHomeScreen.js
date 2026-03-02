@@ -13,8 +13,11 @@ import {
   ScrollView,
   Linking,
   Image,
+  RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { LinearGradient } from 'expo-linear-gradient';
+import theme from '../theme/Theme';
 
 const { width } = Dimensions.get('window');
 
@@ -83,7 +86,6 @@ const EshopHomeScreen = ({ navigation }) => {
   const getIconName = (categoryName) => {
     const name = categoryName.toLowerCase();
     
-    // Check for specific keywords in category names
     if (name.includes('boutique') || name.includes('fashion') || name.includes('clothing') || name.includes('apparel')) {
       return 'checkroom';
     }
@@ -130,18 +132,20 @@ const EshopHomeScreen = ({ navigation }) => {
       return 'shopping-bag';
     }
     
-    // Default fallback icon
     return 'storefront';
   };
 
   const renderQuickActions = () => (
-    <View style={styles.quickActionsContainer}>
+    <LinearGradient
+      colors={['rgba(255,255,255,0.03)', 'rgba(255,255,255,0.01)']}
+      style={styles.quickActionsContainer}
+    >
       <View style={styles.quickActionsRow}>
         <TouchableOpacity 
           style={styles.quickActionButton}
           onPress={() => navigation.navigate('Orders')}
         >
-          <Icon name="receipt-long" size={24} color="#059669" />
+          <Icon name="receipt-long" size={24} color={theme.Colors.primary} />
           <Text style={styles.quickActionText}>My Orders</Text>
         </TouchableOpacity>
         
@@ -149,7 +153,7 @@ const EshopHomeScreen = ({ navigation }) => {
           style={styles.quickActionButton}
           onPress={() => navigation.navigate('Cart')}
         >
-          <Icon name="shopping-cart" size={24} color="#059669" />
+          <Icon name="shopping-cart" size={24} color={theme.Colors.primary} />
           <Text style={styles.quickActionText}>Cart</Text>
         </TouchableOpacity>
         
@@ -157,11 +161,11 @@ const EshopHomeScreen = ({ navigation }) => {
           style={styles.quickActionButton}
           onPress={handleWhatsAppPress}
         >
-          <Icon name="chat" size={24} color="#059669" />
+          <Icon name="chat" size={24} color={theme.Colors.primary} />
           <Text style={styles.quickActionText}>Support</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 
   const renderCategoryItem = ({ item, index }) => (
@@ -179,229 +183,244 @@ const EshopHomeScreen = ({ navigation }) => {
       </View>
       <Text style={styles.categoryName}>{item.name}</Text>
       <Text style={styles.categoryDescription} numberOfLines={2}>
-        {item.description}
+        {item.description || 'Explore our collection'}
       </Text>
       <View style={styles.categoryFooter}>
-       
+        <Icon name="arrow-forward" size={16} color="#fff" />
       </View>
     </TouchableOpacity>
   );
 
   const getCategoryColor = (index) => {
     const emeraldColors = [
-      '#059669', // Emerald 600
-      '#047857', // Emerald 700
-      '#065f46', // Emerald 800
-      '#10b981', // Emerald 500
-      '#34d399', // Emerald 400
-      '#6ee7b7', // Emerald 300
-      '#0d9488', // Teal 600
-      '#0f766e', // Teal 700
-      '#059669', // Emerald 600
-      '#047857', // Emerald 700
-      '#065f46', // Emerald 800
-      '#10b981', // Emerald 500
-      '#34d399', // Emerald 400
-      '#6ee7b7', // Emerald 300
-      '#0d9488', // Teal 600
-      '#0f766e', // Teal 700
+      theme.Colors.primary,
+      theme.Colors.primaryDark,
+      '#065f46',
+      '#10b981',
+      '#34d399',
+      '#6ee7b7',
+      '#0d9488',
+      '#0f766e',
+      theme.Colors.primary,
+      theme.Colors.primaryDark,
+      '#065f46',
+      '#10b981',
+      '#34d399',
+      '#6ee7b7',
+      '#0d9488',
+      '#0f766e',
     ];
     return emeraldColors[index % emeraldColors.length];
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#059669" />
-        <Text style={styles.loadingText}>Loading your shopping experience...</Text>
-      </View>
+      <LinearGradient colors={theme.Gradients.dark} style={styles.loadingContainer}>
+        <View style={styles.loadingContent}>
+          <ActivityIndicator size="large" color={theme.Colors.primary} />
+          <Text style={styles.loadingText}>Loading your shopping experience...</Text>
+        </View>
+      </LinearGradient>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <ScrollView
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#059669']}
-            tintColor="#059669"
-          />
-        }
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Discover Amazing Deals</Text>
-        </View>
-
-        {/* Quick Actions */}
-        {renderQuickActions()}
-
-        {/* Categories Section */}
-        <View style={styles.categoriesSection}>
-          <Text style={styles.sectionTitle}>Shop by Category</Text>
-          {categories.length > 0 ? (
-            <FlatList
-              data={categories}
-              renderItem={renderCategoryItem}
-              keyExtractor={(item) => item._id}
-              numColumns={2}
-              contentContainerStyle={styles.categoriesContainer}
-              columnWrapperStyle={styles.row}
-              showsVerticalScrollIndicator={false}
-              scrollEnabled={false}
+    <LinearGradient colors={theme.Gradients.dark} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.Colors.primary]}
+              tintColor={theme.Colors.primary}
             />
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Icon name="storefront" size={60} color="#9ca3af" />
-              <Text style={styles.emptyText}>No categories available</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={fetchCategories}>
-                <Text style={styles.retryText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* Want Your Shop Here Section */}
-        <View style={styles.shopHereSection}>
-          <TouchableOpacity 
-            style={styles.shopHereCard}
-            onPress={handleOnboardingPress}
-            activeOpacity={0.8}
+          }
+        >
+          {/* Header */}
+          <LinearGradient
+            colors={[theme.Colors.primary, theme.Colors.primaryDark]}
+            style={styles.header}
           >
-            <Icon name="store" size={40} color="#059669" />
-            <View style={styles.shopHereContent}>
-              <Text style={styles.shopHereTitle}>Want Your Shop Here?</Text>
-              <Text style={styles.shopHereSubtitle}>
-                Join our marketplace and start selling to thousands of customers
-              </Text>
-            </View>
-            <Icon name="arrow-forward" size={20} color="#059669" />
-          </TouchableOpacity>
-        </View>
+            <Text style={styles.headerTitle}>Discover Amazing Deals</Text>
+            <Text style={styles.headerSubtitle}>Shop from trusted vendors</Text>
+          </LinearGradient>
 
-      </ScrollView>
+          {/* Quick Actions */}
+          {renderQuickActions()}
 
-      {/* Floating My Orders Button */}
-      <TouchableOpacity 
-        style={styles.floatingButton}
-        onPress={handleMyOrdersPress}
-        activeOpacity={0.8}
-      >
-        <Icon name="receipt-long" size={24} color="#fff" />
-      </TouchableOpacity>
-    </SafeAreaView>
+          {/* Categories Section */}
+          <View style={styles.categoriesSection}>
+            <Text style={styles.sectionTitle}>Shop by Category</Text>
+            {categories.length > 0 ? (
+              <FlatList
+                data={categories}
+                renderItem={renderCategoryItem}
+                keyExtractor={(item) => item._id}
+                numColumns={2}
+                contentContainerStyle={styles.categoriesContainer}
+                columnWrapperStyle={styles.row}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+              />
+            ) : (
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconContainer}>
+                  <Icon name="storefront" size={60} color={theme.Colors.textSecondary} />
+                </View>
+                <Text style={styles.emptyText}>No categories available</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={fetchCategories}>
+                  <LinearGradient
+                    colors={[theme.Colors.primary, theme.Colors.primaryDark]}
+                    style={styles.retryGradient}
+                  >
+                    <Text style={styles.retryText}>Retry</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Want Your Shop Here Section */}
+          <View style={styles.shopHereSection}>
+            <TouchableOpacity 
+              style={styles.shopHereCard}
+              onPress={handleOnboardingPress}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['rgba(255,255,255,0.03)', 'rgba(255,255,255,0.01)']}
+                style={styles.shopHereGradient}
+              >
+                <Icon name="store" size={40} color={theme.Colors.primary} />
+                <View style={styles.shopHereContent}>
+                  <Text style={styles.shopHereTitle}>Want Your Shop Here?</Text>
+                  <Text style={styles.shopHereSubtitle}>
+                    Join our marketplace and start selling to thousands of customers
+                  </Text>
+                </View>
+                <Icon name="arrow-forward" size={20} color={theme.Colors.primary} />
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+
+        {/* Floating My Orders Button */}
+        <TouchableOpacity 
+          style={styles.floatingButton}
+          onPress={handleMyOrdersPress}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={[theme.Colors.primary, theme.Colors.primaryDark]}
+            style={styles.floatingButtonGradient}
+          >
+            <Icon name="receipt-long" size={24} color={theme.Colors.black} />
+          </LinearGradient>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'ivory',
+  },
+  safeArea: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#D1D5DB',
+  },
+  loadingContent: {
+    alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6b7280',
-    fontWeight: '500',
+    ...theme.Typography.body,
+    color: theme.Colors.textSecondary,
+    marginTop: theme.Spacing.md,
   },
   header: {
-    backgroundColor: '#02604c',
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingHorizontal: theme.Spacing.lg,
+    paddingVertical: theme.Spacing.xl,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
+    ...theme.Typography.h1,
+    color: theme.Colors.white,
     textAlign: 'center',
-    alignSelf: 'center',
+  },
+  headerSubtitle: {
+    ...theme.Typography.body,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    marginTop: theme.Spacing.xs,
   },
   quickActionsContainer: {
-    marginHorizontal: 20,
-    marginTop: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 16,
+    ...theme.Components.card,
+    marginHorizontal: theme.Spacing.lg,
+    marginTop: -30,
+    marginBottom: theme.Spacing.lg,
+    padding: theme.Spacing.md,
   },
   quickActionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
   quickActionButton: {
-    backgroundColor: '#fff',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 12,
     alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 4,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    padding: theme.Spacing.sm,
   },
   quickActionText: {
-    fontSize: 12,
-    color: '#374151',
-    marginTop: 8,
-    fontWeight: '500',
+    ...theme.Typography.caption,
+    color: theme.Colors.text,
+    marginTop: theme.Spacing.xs,
   },
   categoriesSection: {
-    marginHorizontal: 20,
-    marginTop: 24,
+    marginHorizontal: theme.Spacing.lg,
+    marginBottom: theme.Spacing.lg,
+  },
+  sectionTitle: {
+    ...theme.Typography.h2,
+    marginBottom: theme.Spacing.lg,
   },
   categoriesContainer: {
-    paddingBottom: 16,
+    paddingBottom: theme.Spacing.md,
   },
   row: {
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: theme.Spacing.md,
   },
   categoryCard: {
     width: (width - 56) / 2,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: theme.BorderRadius.lg,
+    padding: theme.Spacing.md,
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    ...theme.Shadows.medium,
   },
   categoryIconContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
-    padding: 12,
-    marginBottom: 12,
+    padding: theme.Spacing.md,
+    marginBottom: theme.Spacing.sm,
   },
   categoryName: {
-    fontSize: 16,
+    ...theme.Typography.body,
     fontWeight: 'bold',
-    color: '#fff',
+    color: theme.Colors.white,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: theme.Spacing.xs,
   },
   categoryDescription: {
-    fontSize: 12,
+    ...theme.Typography.caption,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: theme.Spacing.sm,
     lineHeight: 16,
   },
   categoryFooter: {
@@ -410,73 +429,77 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: theme.Spacing.xl,
+  },
+  emptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.Spacing.lg,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginTop: 16,
-    marginBottom: 20,
+    ...theme.Typography.body,
+    color: theme.Colors.textSecondary,
+    marginBottom: theme.Spacing.lg,
   },
   retryButton: {
-    backgroundColor: '#059669',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: theme.BorderRadius.md,
+    overflow: 'hidden',
+  },
+  retryGradient: {
+    paddingHorizontal: theme.Spacing.xl,
+    paddingVertical: theme.Spacing.md,
   },
   retryText: {
-    color: '#fff',
-    fontWeight: '600',
+    ...theme.Typography.button,
+    color: theme.Colors.black,
   },
   shopHereSection: {
-    marginHorizontal: 20,
-    marginTop: 24,
+    marginHorizontal: theme.Spacing.lg,
     marginBottom: 100,
   },
   shopHereCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: theme.BorderRadius.lg,
+    overflow: 'hidden',
+  },
+  shopHereGradient: {
+    ...theme.Components.card,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    padding: theme.Spacing.lg,
   },
   shopHereContent: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: theme.Spacing.md,
+    marginRight: theme.Spacing.sm,
   },
   shopHereTitle: {
-    fontSize: 16,
+    ...theme.Typography.body,
     fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
+    color: theme.Colors.text,
+    marginBottom: 2,
   },
   shopHereSubtitle: {
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
+    ...theme.Typography.caption,
+    color: theme.Colors.textSecondary,
+    lineHeight: 18,
   },
   floatingButton: {
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#059669',
+    borderRadius: 28,
+    overflow: 'hidden',
+    ...theme.Shadows.large,
+  },
+  floatingButtonGradient: {
     width: 56,
     height: 56,
-    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
   },
 });
 

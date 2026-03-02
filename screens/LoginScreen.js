@@ -67,14 +67,13 @@ const LoginScreen = ({ navigation }) => {
   };
 
   
-// Google Auth Hook Configuration - Fixed for Login
+// Google Auth Hook Configuration - Fixed for Register
 const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
   androidClientId: '440940724570-5af9vrdpg9e6q81sb675pctvbgbpqhqm.apps.googleusercontent.com',
   webClientId: '440940724570-q2oimhoge0bre1curvl7h8glbnp6rbma.apps.googleusercontent.com',
   redirectUri: makeRedirectUri({
     scheme: 'com.kylexvin.moihub',
     path: 'oauth2redirect',
-    native: 'com.kylexvin.moihub://oauth2redirect',
   }),
   prompt: 'select_account',
 });

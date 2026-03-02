@@ -13,9 +13,11 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import theme from '../../theme/Theme';
 
 const baseURL = Platform.OS === 'ios' 
   ? 'http://localhost:5000' 
@@ -40,76 +42,64 @@ const ListingsScreen = ({ navigation }) => {
   });
   const [loadingMore, setLoadingMore] = useState(false);
 
-// Fetch listings from API (fixed version)
-const fetchListings = useCallback(async (page = 1, shouldReset = false) => {
-  try {
-    if (page === 1) {
-      shouldReset ? setRefreshing(true) : setLoading(true);
-    } else {
-      setLoadingMore(true);
-    }
-
-    const limit = pagination.limit;
-
-    // Build params and remove empty filters
-    const rawParams = {
-      page,
-      limit,
-      ...filters
-    };
-
-    const params = {};
-    for (const key in rawParams) {
-      if (
-        rawParams[key] !== '' &&
-        rawParams[key] !== null &&
-        rawParams[key] !== undefined
-      ) {
-        params[key] = rawParams[key];
+  const fetchListings = useCallback(async (page = 1, shouldReset = false) => {
+    try {
+      if (page === 1) {
+        shouldReset ? setRefreshing(true) : setLoading(true);
+      } else {
+        setLoadingMore(true);
       }
+
+      const limit = pagination.limit;
+
+      const rawParams = {
+        page,
+        limit,
+        ...filters
+      };
+
+      const params = {};
+      for (const key in rawParams) {
+        if (
+          rawParams[key] !== '' &&
+          rawParams[key] !== null &&
+          rawParams[key] !== undefined
+        ) {
+          params[key] = rawParams[key];
+        }
+      }
+
+      const response = await axios.get(`${baseURL}/api/food/listings/vendor`, { params });
+
+      const { listings: newListings, pagination: newPagination } = response.data;
+
+      if (page === 1) {
+        setListings(newListings);
+      } else {
+        setListings(prev => [...prev, ...newListings]);
+      }
+
+      setPagination(newPagination);
+    } catch (error) {
+      console.error('Error fetching listings:', error?.response?.data || error.message);
+      Alert.alert('Error', 'Failed to fetch listings. Please try again.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      setLoadingMore(false);
     }
+  }, [filters, pagination.limit]);
 
-    const response = await axios.get('/api/food/listings/vendor', { params });
+  useEffect(() => {
+    fetchListings(1, true);
+  }, [fetchListings]);
 
-    const { listings: newListings, pagination: newPagination } = response.data;
-
-    if (page === 1) {
-      setListings(newListings);
-    } else {
-      setListings(prev => [...prev, ...newListings]);
-    }
-
-    setPagination(newPagination);
-  } catch (error) {
-    console.error('Error fetching listings:', error?.response?.data || error.message);
-    Alert.alert('Error', 'Failed to fetch listings. Please try again.');
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-    setLoadingMore(false);
-  }
-}, [filters, pagination.limit]);
-
-  // Initial load
-useEffect(() => {
-  fetchListings(1, true);
-}, [fetchListings]);
-useEffect(() => {
-  const test = async () => {
-    const res = await axios.get('/api/food/listings/vendor');
-    console.log('Listings:', res.data);
-  };
-  test();
-}, []);
-
-  // Apply filters
   const applyFilters = () => {
     setFilterModalVisible(false);
     setPagination(prev => ({ ...prev, page: 1 }));
     fetchListings(1);
   };
 
-  // Reset filters
   const resetFilters = () => {
     setFilters({
       category: '',
@@ -119,12 +109,10 @@ useEffect(() => {
     });
   };
 
-  // Toggle listing status
   const toggleListingStatus = async (listingId, currentStatus) => {
     try {
       await axios.patch(`${baseURL}/api/food/listings/${listingId}/toggle-status`);
 
-      // Update local state
       setListings(prev =>
         prev.map(listing =>
           listing._id === listingId
@@ -143,7 +131,6 @@ useEffect(() => {
     }
   };
 
-  // Delete listing
   const deleteListing = async (listingId) => {
     Alert.alert(
       'Delete Listing',
@@ -156,8 +143,6 @@ useEffect(() => {
           onPress: async () => {
             try {
               await axios.delete(`${baseURL}/api/food/listings/${listingId}`);
-
-              // Remove from local state
               setListings(prev => prev.filter(listing => listing._id !== listingId));
               Alert.alert('Success', 'Listing deleted successfully');
             } catch (error) {
@@ -170,38 +155,28 @@ useEffect(() => {
     );
   };
 
-  // Load more listings
   const loadMoreListings = () => {
     if (pagination.page < pagination.pages && !loadingMore) {
       fetchListings(pagination.page + 1);
     }
   };
 
-  // Refresh listings
   const onRefresh = () => {
     fetchListings(1, true);
   };
 
-  // Navigate to add listing
   const navigateToAddListing = () => {
     navigation.navigate('AddListing');
   };
 
-  // Navigate to listing details
-  const navigateToListingDetails = (listing) => {
-    navigation.navigate('ListingDetails', { listing });
-  };
-
-  // Navigate to edit listing
   const navigateToEditListing = (listing) => {
     navigation.navigate('EditListing', { listing });
   };
 
-  // Render listing item
   const renderListingItem = ({ item }) => (
-    <TouchableOpacity
+    <LinearGradient 
+      colors={['rgba(255,255,255,0.03)', 'rgba(255,255,255,0.01)']}
       style={styles.listingCard}
-      onPress={() => navigateToListingDetails(item)}
     >
       <View style={styles.listingImageContainer}>
         <Image
@@ -209,14 +184,16 @@ useEffect(() => {
           style={styles.listingImage}
           defaultSource={require('../../../assets/moihublogo.png')}
         />
-        <View style={[
-          styles.statusBadge,
-          { backgroundColor: item.isActive ? '#4caf50' : '#f44336' }
-        ]}>
+        <LinearGradient
+          colors={item.isActive ? [theme.Colors.success, theme.Colors.success + '80'] : [theme.Colors.danger, theme.Colors.danger + '80']}
+          style={styles.statusBadge}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
           <Text style={styles.statusText}>
             {item.isActive ? 'Active' : 'Inactive'}
           </Text>
-        </View>
+        </LinearGradient>
       </View>
 
       <View style={styles.listingInfo}>
@@ -226,9 +203,12 @@ useEffect(() => {
         <Text style={styles.listingPrice}>
           KES {item.price.toLocaleString()}
         </Text>
-        <Text style={styles.listingCategory}>
-          {item.category}
-        </Text>
+        <View style={styles.categoryContainer}>
+          <Ionicons name="pricetag" size={12} color={theme.Colors.primary} />
+          <Text style={styles.listingCategory}>
+            {item.category}
+          </Text>
+        </View>
         <Text style={styles.listingDescription} numberOfLines={2}>
           {item.description}
         </Text>
@@ -239,34 +219,50 @@ useEffect(() => {
           style={styles.actionButton}
           onPress={() => toggleListingStatus(item._id, item.isActive)}
         >
-          <Ionicons
-            name={item.isActive ? 'pause-circle' : 'play-circle'}
-            size={24}
-            color={item.isActive ? '#f44336' : '#4caf50'}
-          />
+          <LinearGradient
+            colors={['rgba(80, 200, 120, 0.1)', 'rgba(8, 48, 40, 0.2)']}
+            style={styles.actionGradient}
+          >
+            <Ionicons
+              name={item.isActive ? 'pause-circle' : 'play-circle'}
+              size={20}
+              color={item.isActive ? theme.Colors.danger : theme.Colors.success}
+            />
+          </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => navigateToEditListing(item)}
         >
-          <Ionicons name="create" size={24} color="#2196f3" />
+          <LinearGradient
+            colors={['rgba(80, 200, 120, 0.1)', 'rgba(8, 48, 40, 0.2)']}
+            style={styles.actionGradient}
+          >
+            <Ionicons name="create" size={20} color={theme.Colors.info} />
+          </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => deleteListing(item._id)}
         >
-          <Ionicons name="trash" size={24} color="#f44336" />
+          <LinearGradient
+            colors={['rgba(80, 200, 120, 0.1)', 'rgba(8, 48, 40, 0.2)']}
+            style={styles.actionGradient}
+          >
+            <Ionicons name="trash" size={20} color={theme.Colors.danger} />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </LinearGradient>
   );
 
-  // Render empty state
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="restaurant" size={64} color="#ccc" />
+      <View style={styles.emptyIconContainer}>
+        <Ionicons name="restaurant" size={64} color={theme.Colors.textSecondary} />
+      </View>
       <Text style={styles.emptyStateText}>No listings yet</Text>
       <Text style={styles.emptyStateSubtext}>
         Add your first listing to get started
@@ -275,12 +271,16 @@ useEffect(() => {
         style={styles.addButton}
         onPress={navigateToAddListing}
       >
-        <Text style={styles.addButtonText}>Add Listing</Text>
+        <LinearGradient
+          colors={[theme.Colors.primary, theme.Colors.primaryDark]}
+          style={styles.addButtonGradient}
+        >
+          <Text style={styles.addButtonText}>Add Listing</Text>
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
 
-  // Filter Modal
   const FilterModal = () => (
     <Modal
       visible={filterModalVisible}
@@ -289,22 +289,29 @@ useEffect(() => {
       onRequestClose={() => setFilterModalVisible(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <LinearGradient 
+          colors={['rgba(10,10,10,0.95)', theme.Colors.background]}
+          style={styles.modalContent}
+        >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Filter Listings</Text>
             <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
-              <Ionicons name="close" size={24} color="#666" />
+              <Ionicons name="close" size={24} color={theme.Colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.filterSection}>
             <Text style={styles.filterLabel}>Category</Text>
-            <TextInput
-              style={styles.filterInput}
-              placeholder="Enter category"
-              value={filters.category}
-              onChangeText={(text) => setFilters(prev => ({ ...prev, category: text }))}
-            />
+            <View style={styles.filterInputContainer}>
+              <Ionicons name="search" size={16} color={theme.Colors.textSecondary} />
+              <TextInput
+                style={styles.filterInput}
+                placeholder="Enter category"
+                placeholderTextColor={theme.Colors.textTertiary}
+                value={filters.category}
+                onChangeText={(text) => setFilters(prev => ({ ...prev, category: text }))}
+              />
+            </View>
           </View>
 
           <View style={styles.filterSection}>
@@ -402,25 +409,32 @@ useEffect(() => {
               style={styles.applyButton}
               onPress={applyFilters}
             >
-              <Text style={styles.applyButtonText}>Apply</Text>
+              <LinearGradient
+                colors={[theme.Colors.primary, theme.Colors.primaryDark]}
+                style={styles.applyButtonGradient}
+              >
+                <Text style={styles.applyButtonText}>Apply Filters</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
-        </View>
+        </LinearGradient>
       </View>
     </Modal>
   );
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4caf50" />
-        <Text style={styles.loadingText}>Loading listings...</Text>
-      </View>
+      <LinearGradient colors={theme.Gradients.dark} style={styles.loadingContainer}>
+        <View style={styles.loadingContent}>
+          <ActivityIndicator size="large" color={theme.Colors.primary} />
+          <Text style={styles.loadingText}>Loading listings...</Text>
+        </View>
+      </LinearGradient>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={theme.Gradients.dark} style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>My Listings</Text>
         <View style={styles.headerActions}>
@@ -428,13 +442,24 @@ useEffect(() => {
             style={styles.filterButton}
             onPress={() => setFilterModalVisible(true)}
           >
-            <Ionicons name="filter" size={20} color="#666" />
+            <LinearGradient
+              colors={['rgba(80, 200, 120, 0.1)', 'rgba(8, 48, 40, 0.2)']}
+              style={styles.filterButtonGradient}
+            >
+              <Ionicons name="filter" size={18} color={theme.Colors.primary} />
+            </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.addListingButton}
             onPress={navigateToAddListing}
           >
-            <Ionicons name="add" size={20} color="#fff" />
+            <LinearGradient
+              colors={[theme.Colors.primary, theme.Colors.primaryDark]}
+              style={styles.addButtonGradient}
+            >
+              <Ionicons name="add" size={18} color={theme.Colors.black} />
+              <Text style={styles.addButtonLabel}>Add</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -444,7 +469,12 @@ useEffect(() => {
         renderItem={renderListingItem}
         keyExtractor={(item) => item._id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={theme.Colors.primary}
+            colors={[theme.Colors.primary]}
+          />
         }
         onEndReached={loadMoreListings}
         onEndReachedThreshold={0.5}
@@ -452,124 +482,134 @@ useEffect(() => {
         ListFooterComponent={
           loadingMore ? (
             <View style={styles.loadingMore}>
-              <ActivityIndicator size="small" color="#4caf50" />
+              <ActivityIndicator size="small" color={theme.Colors.primary} />
             </View>
           ) : null
         }
         contentContainerStyle={listings.length === 0 && styles.emptyContainer}
+        showsVerticalScrollIndicator={false}
       />
 
       <FilterModal />
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    padding: theme.Spacing.lg,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.Colors.cardBorder,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    ...theme.Typography.h2,
   },
   headerActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: theme.Spacing.sm,
   },
   filterButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    borderRadius: theme.BorderRadius.round,
+    overflow: 'hidden',
+  },
+  filterButtonGradient: {
+    padding: theme.Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addListingButton: {
-    backgroundColor: '#4caf50',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: theme.BorderRadius.round,
+    overflow: 'hidden',
+  },
+  addButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: theme.Spacing.md,
+    paddingVertical: theme.Spacing.sm,
+    gap: theme.Spacing.xs,
+  },
+  addButtonLabel: {
+    ...theme.Typography.bodySmall,
+    color: theme.Colors.black,
+    fontWeight: '600',
   },
   listingCard: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 12,
-    padding: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    ...theme.Components.card,
+    marginHorizontal: theme.Spacing.lg,
+    marginVertical: theme.Spacing.sm,
+    padding: theme.Spacing.md,
   },
   listingImageContainer: {
     position: 'relative',
-    marginBottom: 12,
+    marginBottom: theme.Spacing.md,
   },
   listingImage: {
     width: '100%',
     height: 150,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    borderRadius: theme.BorderRadius.md,
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   statusBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    top: theme.Spacing.sm,
+    right: theme.Spacing.sm,
+    paddingHorizontal: theme.Spacing.sm,
+    paddingVertical: theme.Spacing.xs,
+    borderRadius: theme.BorderRadius.round,
   },
   statusText: {
-    color: '#fff',
+    color: theme.Colors.white,
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   listingInfo: {
-    marginBottom: 12,
+    marginBottom: theme.Spacing.md,
   },
   listingName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    ...theme.Typography.h3,
+    marginBottom: theme.Spacing.xs,
   },
   listingPrice: {
-    fontSize: 16,
+    ...theme.Typography.body,
+    color: theme.Colors.primary,
     fontWeight: '600',
-    color: '#4caf50',
-    marginBottom: 4,
+    marginBottom: theme.Spacing.xs,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: theme.Spacing.xs,
   },
   listingCategory: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+    ...theme.Typography.caption,
+    color: theme.Colors.textSecondary,
   },
   listingDescription: {
-    fontSize: 14,
-    color: '#999',
+    ...theme.Typography.bodySmall,
+    color: theme.Colors.textTertiary,
     lineHeight: 18,
   },
   listingActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 12,
+    gap: theme.Spacing.sm,
   },
   actionButton: {
-    padding: 8,
+    borderRadius: theme.BorderRadius.round,
+    overflow: 'hidden',
+  },
+  actionGradient: {
+    padding: theme.Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyContainer: {
     flex: 1,
@@ -578,132 +618,155 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: theme.Spacing.xl,
+  },
+  emptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.Spacing.lg,
   },
   emptyStateText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#666',
-    marginTop: 16,
+    ...theme.Typography.h3,
+    marginBottom: theme.Spacing.sm,
   },
   emptyStateSubtext: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 8,
+    ...theme.Typography.body,
+    color: theme.Colors.textSecondary,
     textAlign: 'center',
+    marginBottom: theme.Spacing.lg,
   },
   addButton: {
-    backgroundColor: '#4caf50',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    marginTop: 16,
+    borderRadius: theme.BorderRadius.md,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  addButtonGradient: {
+    paddingVertical: theme.Spacing.md,
+    alignItems: 'center',
   },
   addButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...theme.Typography.button,
+    color: theme.Colors.black,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingContent: {
+    alignItems: 'center',
+  },
   loadingText: {
-    marginTop: 16,
-    color: '#666',
+    ...theme.Typography.body,
+    marginTop: theme.Spacing.md,
   },
   loadingMore: {
-    padding: 16,
+    padding: theme.Spacing.lg,
     alignItems: 'center',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    borderTopLeftRadius: theme.BorderRadius.lg,
+    borderTopRightRadius: theme.BorderRadius.lg,
+    padding: theme.Spacing.lg,
     maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: theme.Spacing.lg,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    ...theme.Typography.h3,
   },
   filterSection: {
-    marginBottom: 20,
+    marginBottom: theme.Spacing.lg,
   },
   filterLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    ...theme.Typography.body,
+    color: theme.Colors.textSecondary,
+    marginBottom: theme.Spacing.sm,
+  },
+  filterInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: theme.BorderRadius.md,
+    paddingHorizontal: theme.Spacing.md,
+    borderWidth: 1,
+    borderColor: theme.Colors.cardBorder,
+    gap: theme.Spacing.sm,
   },
   filterInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    flex: 1,
+    ...theme.Typography.body,
+    paddingVertical: theme.Spacing.sm,
+    color: theme.Colors.text,
   },
   filterOptions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: theme.Spacing.sm,
   },
   filterOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    flex: 1,
+    paddingVertical: theme.Spacing.sm,
+    borderRadius: theme.BorderRadius.round,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.Colors.cardBorder,
   },
   filterOptionActive: {
-    backgroundColor: '#4caf50',
+    backgroundColor: theme.Colors.primary,
+    borderColor: theme.Colors.primary,
   },
   filterOptionText: {
-    color: '#666',
-    fontSize: 14,
+    ...theme.Typography.bodySmall,
+    color: theme.Colors.textSecondary,
   },
   filterOptionTextActive: {
-    color: '#fff',
+    color: theme.Colors.black,
+    fontWeight: '600',
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
+    gap: theme.Spacing.md,
+    marginTop: theme.Spacing.lg,
   },
   resetButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    paddingVertical: theme.Spacing.md,
+    borderRadius: theme.BorderRadius.md,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.Colors.cardBorder,
   },
   resetButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
+    ...theme.Typography.button,
+    color: theme.Colors.textSecondary,
   },
   applyButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#4caf50',
+    borderRadius: theme.BorderRadius.md,
+    overflow: 'hidden',
+  },
+  applyButtonGradient: {
+    paddingVertical: theme.Spacing.md,
     alignItems: 'center',
   },
   applyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...theme.Typography.button,
+    color: theme.Colors.black,
   },
 });
 

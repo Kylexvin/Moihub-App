@@ -90,7 +90,6 @@ const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuth
   redirectUri: makeRedirectUri({
     scheme: 'com.kylexvin.moihub',
     path: 'oauth2redirect',
-    native: 'com.kylexvin.moihub://oauth2redirect',
   }),
   prompt: 'select_account',
 });

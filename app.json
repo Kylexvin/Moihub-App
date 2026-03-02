@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/appicon.png",
     "userInterfaceStyle": "dark",
-    "scheme": "moihubapp",
+    "scheme": "com.kylexvin.moihub",
     "splash": {
       "backgroundColor": "#093028",
       "resizeMode": "contain",
