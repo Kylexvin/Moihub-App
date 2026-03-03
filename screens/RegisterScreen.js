@@ -87,10 +87,6 @@ const RegisterScreen = ({ navigation }) => {
 const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
   androidClientId: '440940724570-5af9vrdpg9e6q81sb675pctvbgbpqhqm.apps.googleusercontent.com',
   webClientId: '440940724570-q2oimhoge0bre1curvl7h8glbnp6rbma.apps.googleusercontent.com',
-  redirectUri: makeRedirectUri({
-    scheme: 'com.kylexvin.moihub',
-    path: 'oauth2redirect',
-  }),
   prompt: 'select_account',
 });
 
@@ -122,10 +118,9 @@ const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuth
   // Handle Google Auth Response
   useEffect(() => {
     if (googleResponse?.type === 'success') {
-      const { id_token } = googleResponse.params;
-      
-      if (id_token) {
-        handleBackendSocialLogin('google', id_token);
+      const { access_token } = googleResponse.params;
+          if (access_token) {
+      handleBackendSocialLogin('google', access_token); 
       } else {
         setGoogleLoading(false);
         Alert.alert('Error', 'Google did not return credentials.');

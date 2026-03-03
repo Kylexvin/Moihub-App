@@ -48,23 +48,23 @@
         <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
 
+      <!-- Google OAuth redirect -->
       <intent-filter>
-         <action android:name="android.intent.action.VIEW"/>
-         <category android:name="android.intent.category.DEFAULT"/>
-         <category android:name="android.intent.category.BROWSABLE"/>
-      <data 
-       android:scheme="com.kylexvin.moihub" 
-       android:host="oauth2redirect"
-       android:pathPrefix="/" />
-     </intent-filter>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="com.kylexvin.moihub"/>
+      </intent-filter>
 
+      <!-- GitHub OAuth redirect -->
       <intent-filter>
-       <action android:name="android.intent.action.VIEW"/>
-       <category android:name="android.intent.category.DEFAULT"/>
-       <category android:name="android.intent.category.BROWSABLE"/>
-       <data android:scheme="com.kylexvin.moihub" android:host="github-auth"/>
-     </intent-filter>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="com.kylexvin.moihub" android:host="github-auth"/>
+      </intent-filter>
+
     </activity>
     
   </application> 
-</manifest> 
+</manifest>

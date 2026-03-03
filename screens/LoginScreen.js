@@ -71,10 +71,6 @@ const LoginScreen = ({ navigation }) => {
 const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
   androidClientId: '440940724570-5af9vrdpg9e6q81sb675pctvbgbpqhqm.apps.googleusercontent.com',
   webClientId: '440940724570-q2oimhoge0bre1curvl7h8glbnp6rbma.apps.googleusercontent.com',
-  redirectUri: makeRedirectUri({
-    scheme: 'com.kylexvin.moihub',
-    path: 'oauth2redirect',
-  }),
   prompt: 'select_account',
 });
 
@@ -103,21 +99,21 @@ const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuth
     ]).start();
   }, []);
 
-  // Handle Google Auth Response
-  useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const { id_token } = googleResponse.params;
-      if (id_token) {
-        handleSocialLogin('google', id_token);
-      } else {
-        setGoogleLoading(false);
-        Alert.alert('Error', 'Google did not return credentials.');
-      }
-    } else if (googleResponse?.type === 'error') {
+// Handle Google Auth Response
+useEffect(() => {
+  if (googleResponse?.type === 'success') {
+    const { access_token } = googleResponse.params;
+    if (access_token) {
+      handleSocialLogin('google', access_token);
+    } else {
       setGoogleLoading(false);
-      Alert.alert('Google Error', 'Authentication failed.');
+      Alert.alert('Error', 'Google did not return credentials.');
     }
-  }, [googleResponse]);
+  } else if (googleResponse?.type === 'error') {
+    setGoogleLoading(false);
+    Alert.alert('Google Error', 'Authentication failed.');
+  }
+}, [googleResponse]);
 
 const handleSocialLogin = async (provider, token = null) => {
   if (!permissionGranted) {
