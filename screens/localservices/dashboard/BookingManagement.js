@@ -28,8 +28,9 @@ import Theme from '../../theme/Theme';
 const { Colors, Typography, Spacing, BorderRadius, Shadows } = Theme;
 const { width } = Dimensions.get('window');
 
-// Skeleton Loading Component
+// Skeleton Loading Component (keep as is)
 const SkeletonLoader = ({ type = 'booking' }) => {
+  // ... keep existing skeleton code
   const fadeAnim = new Animated.Value(0.3);
   
   useEffect(() => {
@@ -98,7 +99,7 @@ const BookingManagement = () => {
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('pending'); // CHANGED: default to 'pending'
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -109,24 +110,23 @@ const statusOptions = [
   { value: 'confirmed', label: 'Confirmed', color: Colors.info },
   { value: 'completed', label: 'Completed', color: Colors.success },
   { value: 'cancelled', label: 'Cancelled', color: Colors.danger },
-  { value: 'no_show', label: 'No Show', color: Colors.textSecondary }, // Make sure this exists
+  { value: 'no_show', label: 'No Show', color: Colors.textSecondary },
 ];  
 
-// In your BookingManagement.js component
 const statusLabels = {
   pending: { 
     label: 'PENDING', 
     color: Colors.warning, 
     bgColor: Colors.warning,
     textColor: Colors.white,
-    nextStatuses: ['confirmed', 'cancelled', 'no_show'] // Added 'no_show'
+    nextStatuses: ['confirmed', 'cancelled', 'no_show']
   },
   confirmed: { 
     label: 'CONFIRMED', 
     color: Colors.info, 
     bgColor: Colors.info,
     textColor: Colors.white,
-    nextStatuses: ['completed', 'cancelled', 'no_show'] // Already has 'no_show'
+    nextStatuses: ['completed', 'cancelled', 'no_show']
   },
   completed: { 
     label: 'COMPLETED', 
@@ -186,7 +186,7 @@ const fetchBookings = async () => {
       id: booking._id,
       customer: {
         name: booking.userId?.username || 'Customer',
-        phone: booking.phoneNumber || booking.userId?.phone || '', // FIXED: Use booking.phoneNumber first
+        phone: booking.phoneNumber || booking.userId?.phone || '',
         email: booking.userId?.email
       },
       service: {
@@ -199,7 +199,7 @@ const fetchBookings = async () => {
       status: booking.status,
       totalAmount: booking.totalAmount,
       notes: booking.notes,
-      phoneNumber: booking.phoneNumber, // Keep separately
+      phoneNumber: booking.phoneNumber,
       createdAt: new Date(booking.createdAt)
     })) || [];
     
@@ -256,7 +256,6 @@ const fetchBookings = async () => {
       setUpdatingStatus(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
-      // Use PUT request as per your API
       const response = await axios.put(
         `/api/services/dashboard/bookings/${selectedBooking.id}/status`,
         { status: newStatus }
@@ -265,7 +264,6 @@ const fetchBookings = async () => {
       if (response.data.message || response.status === 200) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         
-        // Update local state
         setBookings(prev => prev.map(booking => 
           booking.id === selectedBooking.id 
             ? { ...booking, status: newStatus }
@@ -275,7 +273,6 @@ const fetchBookings = async () => {
         setShowStatusModal(false);
         setSelectedBooking(null);
         
-        // Refresh data if filtered by status
         if (statusFilter !== 'all' && statusFilter !== newStatus) {
           setTimeout(() => fetchData(), 300);
         }
@@ -297,7 +294,6 @@ const fetchBookings = async () => {
     }
   };
 
-  // ACTUAL NATIVE CALL FUNCTION
   const handleCallCustomer = async (phone) => {
     if (!phone || phone.trim() === '') {
       Alert.alert('No Phone', 'Customer has not provided a phone number');
@@ -307,7 +303,6 @@ const fetchBookings = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     const cleanPhone = phone.replace(/\D/g, '');
-    
     const url = `tel:${cleanPhone}`;
     
     const canOpen = await Linking.canOpenURL(url);
@@ -318,7 +313,6 @@ const fetchBookings = async () => {
     }
   };
 
-  // ACTUAL NATIVE WHATSAPP FUNCTION
   const handleMessageCustomer = async (phone, name) => {
     if (!phone || phone.trim() === '') {
       Alert.alert('No Phone', 'Customer has not provided a phone number');
@@ -380,7 +374,6 @@ const fetchBookings = async () => {
     return `KES ${amount?.toLocaleString() || '0'}`;
   };
 
-  // COPY PHONE NUMBER TO CLIPBOARD
   const copyPhoneNumber = async (phone, name) => {
     if (!phone) return;
     
@@ -389,26 +382,79 @@ const fetchBookings = async () => {
     Alert.alert('Copied', `${name}'s phone number copied to clipboard`);
   };
 
+  // NEW: Smart date tag function
+  const getServiceDateTag = (serviceDate) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const date = new Date(serviceDate);
+    date.setHours(0, 0, 0, 0);
+    
+    const diffTime = date - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return { label: 'OVERDUE', color: Colors.danger };
+    } else if (diffDays === 0) {
+      return { label: 'TODAY', color: Colors.success };
+    } else if (diffDays === 1) {
+      return { label: 'TOMORROW', color: Colors.warning };
+    } else if (diffDays <= 7) {
+      return { label: `${diffDays} DAYS`, color: Colors.info };
+    } else {
+      return { label: formatDate(date), color: Colors.textSecondary };
+    }
+  };
+
+  // NEW: Get relative time for when booking was made
+  const getBookedTimeAgo = (createdAt) => {
+    const now = new Date();
+    const bookedAt = new Date(createdAt);
+    const diffMs = now - bookedAt;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hr ago`;
+    if (diffDays === 1) return 'Yesterday';
+    return `${diffDays} days ago`;
+  };
+
 const renderBookingItem = ({ item }) => {
   const statusInfo = statusLabels[item.status] || statusLabels.pending;
   const hasPhone = item.customer.phone && item.customer.phone.trim() !== '';
+  const dateTag = getServiceDateTag(item.date);
+  const bookedTimeAgo = getBookedTimeAgo(item.createdAt);
   
   return (
     <View style={styles.bookingCard}>
+      {/* Header with service name and date tag */}
       <View style={styles.bookingHeader}>
-        <Text style={styles.serviceName}>{item.service.name}</Text>
-        <TouchableOpacity 
-          style={[styles.statusBadge, { backgroundColor: statusInfo.bgColor }]}
-          onPress={() => handleUpdateStatus(item)}
-        >
-          <Text style={[styles.statusText, { color: statusInfo.textColor }]}>
-            {statusInfo.label}
+        <View style={styles.serviceNameContainer}>
+          <Text style={styles.serviceName}>{item.service.name}</Text>
+          <Text style={styles.bookedTimeAgo}>Booked {bookedTimeAgo}</Text>
+        </View>
+        <View style={[styles.dateTag, { backgroundColor: dateTag.color + '20' }]}>
+          <Text style={[styles.dateTagText, { color: dateTag.color }]}>
+            {dateTag.label}
           </Text>
-          {statusInfo.nextStatuses.length > 0 && (
-            <Ionicons name="chevron-forward" size={12} color={statusInfo.textColor} />
-          )}
-        </TouchableOpacity>
+        </View>
       </View>
+      
+      {/* Status badge moved below header */}
+      <TouchableOpacity 
+        style={[styles.statusBadge, { backgroundColor: statusInfo.bgColor }]}
+        onPress={() => handleUpdateStatus(item)}
+      >
+        <Text style={[styles.statusText, { color: statusInfo.textColor }]}>
+          {statusInfo.label}
+        </Text>
+        {statusInfo.nextStatuses.length > 0 && (
+          <Ionicons name="chevron-forward" size={12} color={statusInfo.textColor} />
+        )}
+      </TouchableOpacity>
       
       <View style={styles.bookingBody}>
         <View style={styles.detailRow}>
@@ -435,31 +481,11 @@ const renderBookingItem = ({ item }) => {
           </View>
         </View>
         
-        {/* SHOW PHONE NUMBER IN BODY */}
+        {/* Phone number with contact options */}
         {hasPhone && (
-          <View style={styles.detailRow}>
-            <View style={styles.detailColumn}>
-              <Text style={styles.detailLabel}>Contact</Text>
-              <Text style={[styles.detailValue, { color: Colors.primary }]}>
-                {item.customer.phone}
-              </Text>
-            </View>
-          </View>
-        )}
-        
-        {item.notes ? (
-          <View style={styles.notesContainer}>
-            <Text style={styles.notesLabel}>Notes:</Text>
-            <Text style={styles.notesText}>{item.notes}</Text>
-          </View>
-        ) : null}
-      </View>
-      
-      <View style={styles.bookingFooter}>
-        <TouchableOpacity 
-          style={[styles.phoneContainer, !hasPhone && styles.disabledButton]}
-          onPress={() => {
-            if (hasPhone) {
+          <TouchableOpacity 
+            style={styles.phoneRow}
+            onPress={() => {
               Alert.alert(
                 'Contact Customer',
                 item.customer.phone,
@@ -479,32 +505,61 @@ const renderBookingItem = ({ item }) => {
                   }
                 ]
               );
-            }
-          }}
+            }}
+          >
+            <Ionicons name="call" size={16} color={Colors.primary} />
+            <Text style={styles.phoneNumber}>{item.customer.phone}</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+          </TouchableOpacity>
+        )}
+        
+        {item.notes ? (
+          <View style={styles.notesContainer}>
+            <Text style={styles.notesLabel}>Notes:</Text>
+            <Text style={styles.notesText}>{item.notes}</Text>
+          </View>
+        ) : null}
+      </View>
+      
+      <View style={styles.bookingFooter}>
+        <TouchableOpacity 
+          style={[styles.actionButton, !hasPhone && styles.disabledButton]}
+          onPress={() => handleCallCustomer(item.customer.phone)}
+          disabled={!hasPhone}
         >
           <Ionicons 
             name="call" 
-            size={14} 
-            color={hasPhone ? Colors.primary : Colors.textSecondary} 
+            size={20} 
+            color={hasPhone ? Colors.primary : '#666'} 
           />
-          <Text style={[styles.phoneText, !hasPhone && styles.disabledText]}>
-            {hasPhone ? item.customer.phone : 'No phone'}
-          </Text>
-          {hasPhone && (
-            <Ionicons name="chevron-forward" size={12} color={Colors.primary} />
-          )}
+          <Text style={[styles.actionText, !hasPhone && styles.disabledText]}>Call</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.actionButton, !hasPhone && styles.disabledButton]}
+          onPress={() => handleMessageCustomer(item.customer.phone, item.customer.name)}
+          disabled={!hasPhone}
+        >
+          <Ionicons 
+            name="logo-whatsapp" 
+            size={20} 
+            color={hasPhone ? '#25D366' : '#666'} 
+          />
+          <Text style={[styles.actionText, !hasPhone && styles.disabledText]}>WhatsApp</Text>
         </TouchableOpacity>
         
         {statusInfo.nextStatuses.length > 0 ? (
           <TouchableOpacity 
-            style={styles.updateButton}
+            style={styles.actionButton}
             onPress={() => handleUpdateStatus(item)}
           >
-            <Ionicons name="refresh" size={16} color={Colors.text} />
+            <Ionicons name="refresh" size={20} color={Colors.primary} />
+            <Text style={styles.actionText}>Update</Text>
           </TouchableOpacity>
         ) : (
-          <View style={styles.finalStatusBadge}>
-            <Ionicons name="checkmark-done" size={16} color={statusInfo.color} />
+          <View style={styles.actionButton}>
+            <Ionicons name="checkmark-done" size={20} color={statusInfo.color} />
+            <Text style={[styles.actionText, { color: statusInfo.color }]}>Done</Text>
           </View>
         )}
       </View>
@@ -832,6 +887,7 @@ const renderBookingItem = ({ item }) => {
   );
 };
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -953,6 +1009,61 @@ detailValue: {
   fontSize: 14,
   color: Colors.white,
 }, 
+
+serviceNameContainer: {
+    flex: 1,
+    marginRight: Spacing.sm,
+  },
+  bookedTimeAgo: {
+    ...Typography.caption,
+    color: '#888',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  dateTag: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.round,
+  },
+  dateTagText: {
+    ...Typography.caption,
+    fontWeight: '700',
+    fontSize: 11,
+    letterSpacing: 0.5,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A2A2A',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    marginTop: Spacing.xs,
+    gap: 8,
+  },
+  phoneNumber: {
+    ...Typography.body,
+    color: Colors.primary,
+    fontSize: 14,
+    flex: 1,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.sm,
+    backgroundColor: '#2A2A2A',
+    borderRadius: BorderRadius.sm,
+    marginHorizontal: 4,
+  },
+  actionText: {
+    ...Typography.caption,
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+
   // Dark Cards
   bookingCard: {
     backgroundColor: '#1A1A1A',

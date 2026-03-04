@@ -27,11 +27,11 @@ const SelfieStep = ({ navigation }) => {
       'Choose how you want to add your selfie',
       [
         {
-          text: 'Camera',
+          text: '📸 Camera',
           onPress: () => openCamera(),
         },
         {
-          text: 'Photo Library',
+          text: '🖼️ Photo Library',
           onPress: () => openImageLibrary(),
         },
         {
@@ -46,7 +46,10 @@ const SelfieStep = ({ navigation }) => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Camera permission is required to take photos');
+        Alert.alert(
+          'Permission Needed',
+          'Camera access helps you take a verification selfie. This is required for Moi University verification.'
+        );
         return;
       }
 
@@ -78,7 +81,10 @@ const SelfieStep = ({ navigation }) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Photo library permission is required to select photos');
+        Alert.alert(
+          'Permission Needed',
+          'Photo library access lets you select a verification selfie. This is required for Moi University verification.'
+        );
         return;
       }
 
@@ -109,13 +115,19 @@ const SelfieStep = ({ navigation }) => {
   const validateImage = (image) => {
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (image.fileSize > maxSize) {
-      Alert.alert('File Too Large', 'Please select an image smaller than 5MB');
+      Alert.alert(
+        'File Too Large',
+        'Please select an image smaller than 5MB to ensure quick upload'
+      );
       return false;
     }
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     if (!allowedTypes.includes(image.type)) {
-      Alert.alert('Invalid File Type', 'Please select a JPEG, JPG, or PNG image');
+      Alert.alert(
+        'Invalid File Type',
+        'Please select a JPEG, JPG, or PNG image for best quality'
+      );
       return false;
     }
 
@@ -124,7 +136,10 @@ const SelfieStep = ({ navigation }) => {
 
   const handleContinue = async () => {
     if (!selectedImage) {
-      Alert.alert('No Image Selected', 'Please select a selfie to continue');
+      Alert.alert(
+        'Selfie Required',
+        '📸 Please take or select a verification selfie to continue.\n\nThis helps us verify you\'re a Moi University student.'
+      );
       return;
     }
 
@@ -207,7 +222,7 @@ const SelfieStep = ({ navigation }) => {
               <Text style={styles.backText}>← Back</Text>
             </TouchableOpacity>
             <View style={styles.stepContainer}>
-              <Text style={styles.step}>Step 3A of 4</Text>
+              <Text style={styles.step}>Step 3 of 4</Text>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: '75%' }]} />
               </View>
@@ -215,25 +230,92 @@ const SelfieStep = ({ navigation }) => {
           </View>
 
           <View style={styles.content}>
-            <Text style={styles.title}>Add your selfie</Text>
+            <Text style={styles.title}>Verify Your Identity</Text>
             <Text style={styles.subtitle}>
-              Upload a clear photo of yourself taken within Moi University premises for verification. 
-              This helps us ensure authentic profiles and confirm you're on campus.
+              Take a verification selfie within Moi University premises
             </Text>
 
-            
+            {/* Moi University Notice */}
+            <View style={styles.universityNotice}>
+              <LinearGradient
+                colors={['rgba(123, 32, 161, 0.2)', 'rgba(157, 78, 221, 0.1)']}
+                style={styles.noticeGradient}
+              >
+                <View style={styles.noticeIconContainer}>
+                  <Text style={styles.noticeIcon}>🎓</Text>
+                </View>
+                <View style={styles.noticeContent}>
+                  <Text style={styles.noticeTitle}>Moi University Verification</Text>
+                  <Text style={styles.noticeText}>
+                    Selfie must be taken within university premises. This confirms you're a current student.
+                  </Text>
+                </View>
+              </LinearGradient>
+            </View>
 
+            {/* Security & Privacy Card */}
+            <View style={styles.privacyCard}>
+              <View style={styles.privacyHeader}>
+                <Text style={styles.privacyIcon}>🔒</Text>
+                <Text style={styles.privacyTitle}>Your Privacy is Protected</Text>
+              </View>
+              
+              <View style={styles.privacyFeatures}>
+                <View style={styles.privacyFeature}>
+                  <Text style={styles.featureIcon}>✓</Text>
+                  <Text style={styles.featureText}>
+                    <Text style={styles.featureBold}>Verification only</Text> - Never shared publicly
+                  </Text>
+                </View>
+                
+                <View style={styles.privacyFeature}>
+                  <Text style={styles.featureIcon}>✓</Text>
+                  <Text style={styles.featureText}>
+                    <Text style={styles.featureBold}>Screenshot protected</Text> - Can't be captured
+                  </Text>
+                </View>
+                
+                <View style={styles.privacyFeature}>
+                  <Text style={styles.featureIcon}>✓</Text>
+                  <Text style={styles.featureText}>
+                    <Text style={styles.featureBold}>Secure storage</Text> - Encrypted & confidential
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.screenshotWarning}>
+                <Text style={styles.warningIcon}>⚠️</Text>
+                <Text style={styles.warningText}>
+                  LinkMe screenshots are disabled for your security
+                </Text>
+              </View>
+            </View>
+
+            {/* Image Upload Section */}
             <View style={styles.imageSection}>
+              <Text style={styles.sectionLabel}>Upload Your Selfie</Text>
+              
               <TouchableOpacity
-                style={styles.imageContainer}
+                style={[
+                  styles.imageContainer,
+                  selectedImage && styles.imageContainerSelected
+                ]}
                 onPress={showImagePicker}
               >
                 {selectedImage ? (
-                  <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
+                  <>
+                    <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
+                    <View style={styles.imageOverlay}>
+                      <Text style={styles.overlayText}>Tap to change</Text>
+                    </View>
+                  </>
                 ) : (
                   <View style={styles.placeholderContainer}>
-                    <Text style={styles.placeholderIcon}>📷</Text>
-                    <Text style={styles.placeholderText}>Tap to add selfie</Text>
+                    <Text style={styles.placeholderIcon}>📸</Text>
+                    <Text style={styles.placeholderTitle}>Add Your Selfie</Text>
+                    <Text style={styles.placeholderSubtext}>
+                      Tap to take a photo or choose from gallery
+                    </Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -243,18 +325,55 @@ const SelfieStep = ({ navigation }) => {
                   style={styles.changePhotoButton}
                   onPress={showImagePicker}
                 >
-                  <Text style={styles.changePhotoText}>Change Photo</Text>
+                  <Text style={styles.changePhotoText}>⟲ Take Different Photo</Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            <View style={styles.tipsContainer}>
-              <Text style={styles.tipsTitle}>Photo Requirements:</Text>
-              <View style={styles.tipsList}>
-                <Text style={styles.tipItem}>• Must be taken within Moi University premises</Text>
-                <Text style={styles.tipItem}>• Show your face clearly</Text>              
-                <Text style={styles.tipItem}>• Maximum file size: 5MB</Text>              
+            {/* Requirements with explanations */}
+            <View style={styles.requirementsCard}>
+              <Text style={styles.requirementsTitle}>✅ Photo Requirements</Text>
+              
+              <View style={styles.requirementItem}>
+                <Text style={styles.requirementIcon}>📍</Text>
+                <View style={styles.requirementContent}>
+                  <Text style={styles.requirementMain}>Moi University Location</Text>
+                  <Text style={styles.requirementDetail}>
+                    Must be taken on campus (library, hostels, classes, etc.)
+                  </Text>
+                </View>
               </View>
+
+              <View style={styles.requirementItem}>
+                <Text style={styles.requirementIcon}>👤</Text>
+                <View style={styles.requirementContent}>
+                  <Text style={styles.requirementMain}>Clear Face Visible</Text>
+                  <Text style={styles.requirementDetail}>
+                    No masks, sunglasses, or heavy filters
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.requirementItem}>
+                <Text style={styles.requirementIcon}>📱</Text>
+                <View style={styles.requirementContent}>
+                  <Text style={styles.requirementMain}>Good Quality</Text>
+                  <Text style={styles.requirementDetail}>
+                    Well-lit, clear image under 5MB
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Why we need this */}
+            <View style={styles.whyContainer}>
+              <Text style={styles.whyTitle}>Why verification is required:</Text>
+              <Text style={styles.whyText}>
+                • Confirms you're a current Moi University student{'\n'}
+                • Prevents fake profiles and bots{'\n'}
+                • Creates a safer community for everyone{'\n'}
+                • Helps find genuine campus connections
+              </Text>
             </View>
           </View>
         </ScrollView>
@@ -281,12 +400,19 @@ const SelfieStep = ({ navigation }) => {
               {loading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator color="#fff" size="small" />
-                  <Text style={styles.loadingText}>Uploading...</Text>
+                  <Text style={styles.loadingText}>Uploading securely...</Text>
                 </View>
               ) : (
-                <Text style={styles.continueButtonText}>
-                  Continue →
-                </Text>
+                <>
+                  <Text style={styles.continueButtonText}>
+                    {isFormValid() ? 'Continue →' : 'Add Selfie to Continue'}
+                  </Text>
+                  {!isFormValid() && (
+                    <Text style={styles.buttonHelper}>
+                      Verification required for Moi University students
+                    </Text>
+                  )}
+                </>
               )}
               {isFormValid() && <View style={styles.buttonGlow} />}
             </LinearGradient>
@@ -418,49 +544,134 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#ffffff',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     textShadowColor: 'rgba(123, 32, 161, 0.5)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#e0e0e0',
+    color: '#b19cd9',
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
     lineHeight: 22,
     paddingHorizontal: 10,
   },
-  requirementBox: {
-    backgroundColor: 'rgba(123, 32, 161, 0.1)',
+  universityNotice: {
+    marginBottom: 20,
     borderRadius: 15,
-    padding: 15,
-    marginBottom: 25,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(123, 32, 161, 0.3)',
-    shadowColor: '#7b20a1',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
   },
-  requirementTitle: {
+  noticeGradient: {
+    flexDirection: 'row',
+    padding: 15,
+    alignItems: 'center',
+  },
+  noticeIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(123, 32, 161, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  noticeIcon: {
+    fontSize: 20,
+  },
+  noticeContent: {
+    flex: 1,
+  },
+  noticeTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#c77dff',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  requirementText: {
+  noticeText: {
     fontSize: 14,
     color: '#b19cd9',
     lineHeight: 20,
   },
+  privacyCard: {
+    backgroundColor: 'rgba(123, 32, 161, 0.1)',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(123, 32, 161, 0.3)',
+  },
+  privacyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  privacyIcon: {
+    fontSize: 24,
+    marginRight: 8,
+  },
+  privacyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  privacyFeatures: {
+    marginBottom: 12,
+  },
+  privacyFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  featureIcon: {
+    color: '#4cd964',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 8,
+    width: 20,
+  },
+  featureText: {
+    color: '#e0e0e0',
+    fontSize: 14,
+    flex: 1,
+  },
+  featureBold: {
+    fontWeight: '700',
+    color: '#c77dff',
+  },
+  screenshotWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 193, 7, 0.3)',
+  },
+  warningIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  warningText: {
+    color: '#ffd700',
+    fontSize: 13,
+    flex: 1,
+  },
   imageSection: {
-    marginBottom: 25,
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 12,
   },
   imageContainer: {
     borderRadius: 15,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: 'rgba(123, 32, 161, 0.3)',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     shadowColor: '#7b20a1',
@@ -471,10 +682,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  imageContainerSelected: {
+    borderColor: '#4cd964',
+    borderWidth: 2,
+  },
   selectedImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    padding: 8,
+    alignItems: 'center',
+  },
+  overlayText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   placeholderContainer: {
     justifyContent: 'center',
@@ -482,12 +711,18 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   placeholderIcon: {
-    fontSize: 48,
+    fontSize: 64,
     color: '#b19cd9',
     marginBottom: 12,
   },
-  placeholderText: {
-    fontSize: 16,
+  placeholderTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 8,
+  },
+  placeholderSubtext: {
+    fontSize: 14,
     color: '#999',
     textAlign: 'center',
   },
@@ -501,22 +736,57 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  tipsContainer: {
-    marginTop: 15,
+  requirementsCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  tipsTitle: {
+  requirementsTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
+    marginBottom: 12,
+  },
+  requirementItem: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  requirementIcon: {
+    fontSize: 20,
+    width: 30,
+    color: '#c77dff',
+  },
+  requirementContent: {
+    flex: 1,
+  },
+  requirementMain: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 2,
+  },
+  requirementDetail: {
+    fontSize: 13,
+    color: '#b19cd9',
+  },
+  whyContainer: {
+    backgroundColor: 'rgba(123, 32, 161, 0.05)',
+    borderRadius: 15,
+    padding: 15,
     marginBottom: 10,
   },
-  tipsList: {
-    paddingLeft: 15,
-  },
-  tipItem: {
-    fontSize: 14,
-    color: '#b19cd9',
+  whyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#c77dff',
     marginBottom: 8,
+  },
+  whyText: {
+    fontSize: 13,
+    color: '#b19cd9',
     lineHeight: 20,
   },
   footer: {
@@ -561,6 +831,11 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
     zIndex: 1,
+  },
+  buttonHelper: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginTop: 4,
   },
   loadingContainer: {
     flexDirection: 'row',

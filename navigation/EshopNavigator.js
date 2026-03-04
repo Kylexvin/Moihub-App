@@ -82,6 +82,7 @@ const EshopNavigator = () => {
           headerTitle: currentUser?.username
             ? `📋 ${currentUser.username}'s Orders`
             : '📋 My Orders',
+            headerShown: false,
           headerStyle: {
             backgroundColor: '#10b981',
           },

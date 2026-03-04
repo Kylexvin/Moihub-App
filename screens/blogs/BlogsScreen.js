@@ -9,12 +9,32 @@ import {
   StyleSheet, 
   RefreshControl,
   Alert,  
-  Dimensions
+  Dimensions,
+  StatusBar
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import * as Animatable from 'react-native-animatable';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
+
+// Blog-themed color palette
+const BlogColors = {
+  primary: '#7C4DFF',      // Vibrant Purple
+  secondary: '#FF6B6B',    // Coral
+  accent: '#4ECDC4',       // Turquoise
+  background: '#0A0A0A',   // Dark Background
+  surface: '#1A1A1A',      // Surface Dark
+  card: '#242424',         // Card Background
+  text: '#FFFFFF',         // White
+  textSecondary: '#B0B0B0', // Light Gray
+  textMuted: '#757575',     // Muted Gray
+  border: '#333333',        // Border
+  like: '#FF6B6B',         // Like color
+  readTime: '#4ECDC4',     // Read time color
+};
 
 const BlogsScreen = ({ navigation }) => {
   const [blogs, setBlogs] = useState([]);
@@ -62,81 +82,201 @@ const BlogsScreen = ({ navigation }) => {
     });
   };
 
+  const getCategoryIcon = (category) => {
+    const icons = {
+      'Technology': 'computer',
+      'Lifestyle': 'spa',
+      'Health': 'fitness-center',
+      'Education': 'school',
+      'Entertainment': 'movie',
+      'Sports': 'sports-soccer',
+      'Food': 'restaurant',
+      'Travel': 'flight',
+    };
+    return icons[category] || 'article';
+  };
+
   const renderItem = ({ item, index }) => (
-    <TouchableOpacity 
-      onPress={() => navigation.navigate('BlogDetails', { id: item._id })} 
-      style={[styles.card, { marginTop: index === 0 ? 0 : 16 }]}
-      activeOpacity={0.7}
+    <Animatable.View 
+      animation="fadeInUp" 
+      delay={index * 100}
+      duration={600}
     >
-      <View style={styles.imageContainer}>
-        <Image 
-          source={{ uri: item.image }} 
-          style={styles.image}
-          resizeMode="cover"
-        />
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{item.category}</Text>
-        </View>
-        <View style={styles.likesContainer}>
-          <Text style={styles.likesText}>❤️ {item.likes?.length || 0}</Text>
-        </View>
-      </View>
-      
-      <View style={styles.info}>
-        <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
-        <Text numberOfLines={3} style={styles.excerpt}>{item.excerpt}</Text>
-        
-        <View style={styles.metaContainer}>
-          <View style={styles.authorContainer}>
-            <View style={styles.authorAvatar}>
-              <Text style={styles.authorInitial}>
-                {item.author?.username?.charAt(0)?.toUpperCase()}
-              </Text>
+      <TouchableOpacity 
+        onPress={() => navigation.navigate('BlogDetails', { id: item._id })} 
+        style={styles.card}
+        activeOpacity={0.9}
+      >
+        <LinearGradient
+          colors={[BlogColors.card, BlogColors.surface]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.cardGradient}
+        >
+          {/* Decorative Pattern */}
+          <View style={styles.cardPattern}>
+            <Text style={styles.patternIcon}>📝</Text>
+            <Text style={styles.patternIcon}>✍️</Text>
+          </View>
+
+          <View style={styles.imageContainer}>
+            <Image 
+              source={{ uri: item.image || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=400' }} 
+              style={styles.image}
+              resizeMode="cover"
+            />
+            
+            {/* Category Badge */}
+            <LinearGradient
+              colors={[BlogColors.primary, BlogColors.secondary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.categoryBadge}
+            >
+              <Icon name={getCategoryIcon(item.category)} size={12} color="#fff" />
+              <Text style={styles.categoryText}>{item.category}</Text>
+            </LinearGradient>
+
+            {/* Likes Badge */}
+            <View style={styles.likesBadge}>
+              <Icon name="favorite" size={14} color={BlogColors.like} />
+              <Text style={styles.likesText}>{item.likes?.length || 0}</Text>
             </View>
-            <Text style={styles.authorName}>by {item.author?.username}</Text>
           </View>
           
-          <View style={styles.metaInfo}>
-            <Text style={styles.readTime}>📖 {item.readTime} min read</Text>
-            <Text style={styles.date}>📅 {formatDate(item.date)}</Text>
+          <View style={styles.content}>
+            <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
+            
+            <Text numberOfLines={2} style={styles.excerpt}>
+              {item.excerpt || item.content?.substring(0, 120) + '...'}
+            </Text>
+            
+            <View style={styles.metaContainer}>
+              {/* Author */}
+              <View style={styles.authorContainer}>
+                <LinearGradient
+                  colors={[BlogColors.primary, BlogColors.secondary]}
+                  style={styles.authorAvatar}
+                >
+                  <Text style={styles.authorInitial}>
+                    {item.author?.username?.charAt(0)?.toUpperCase()}
+                  </Text>
+                </LinearGradient>
+                <View>
+                  <Text style={styles.authorName}>{item.author?.username}</Text>
+                  <Text style={styles.authorRole}>Writer</Text>
+                </View>
+              </View>
+
+              {/* Meta Info */}
+              <View style={styles.metaInfo}>
+                <View style={styles.metaItem}>
+                  <Icon name="access-time" size={14} color={BlogColors.readTime} />
+                  <Text style={styles.readTime}>{item.readTime || 5} min</Text>
+                </View>
+                <View style={styles.metaItem}>
+                  <Icon name="calendar-today" size={14} color={BlogColors.textMuted} />
+                  <Text style={styles.date}>{formatDate(item.date)}</Text>
+                </View>
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
-    </TouchableOpacity>
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animatable.View>
   );
 
   const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyStateTitle}>No blogs available</Text>
+    <Animatable.View animation="fadeIn" duration={800} style={styles.emptyState}>
+      <View style={styles.emptyIconContainer}>
+        <Icon name="library-books" size={60} color={BlogColors.primary} />
+      </View>
+      <Text style={styles.emptyStateTitle}>No articles yet</Text>
       <Text style={styles.emptyStateText}>
-        Pull down to refresh or check back later for new content.
+        Check back later for new content from our writers
       </Text>
-      <TouchableOpacity style={styles.retryButton} onPress={() => fetchBlogs()}>
-        <Text style={styles.retryButtonText}>Retry</Text>
+      <TouchableOpacity 
+        style={styles.retryButton} 
+        onPress={() => fetchBlogs()}
+      >
+        <LinearGradient
+          colors={[BlogColors.primary, BlogColors.secondary]}
+          style={styles.retryGradient}
+        >
+          <Icon name="refresh" size={18} color="#fff" />
+          <Text style={styles.retryButtonText}>Refresh</Text>
+        </LinearGradient>
       </TouchableOpacity>
-    </View>
+    </Animatable.View>
   );
 
   const renderHeader = () => (
-    <View style={styles.header}>
-      <Text style={styles.headerTitle}>Latest Blogs</Text>
-      <Text style={styles.headerSubtitle}>
-        {blogs.length} {blogs.length === 1 ? 'article' : 'articles'} available
-      </Text>
+    <Animatable.View animation="fadeInDown" duration={800} style={styles.header}>
+      <View>
+        <Text style={styles.headerTitle}>Blog</Text>
+        <Text style={styles.headerSubtitle}>
+          Discover stories, insights & ideas
+        </Text>
+      </View>
+      <View style={styles.headerStats}>
+        <View style={styles.statBadge}>
+          <Icon name="article" size={16} color={BlogColors.primary} />
+          <Text style={styles.statText}>{blogs.length} articles</Text>
+        </View>
+      </View>
+    </Animatable.View>
+  );
+
+  const renderFooter = () => (
+    <View style={styles.footer}>
+      <LinearGradient
+        colors={[BlogColors.primary + '20', 'transparent']}
+        style={styles.footerGradient}
+      >
+        <Icon name="arrow-downward" size={20} color={BlogColors.primary} />
+        <Text style={styles.footerText}>Keep scrolling for more</Text>
+      </LinearGradient>
     </View>
   );
 
   if (loading && blogs.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
-        <Text style={styles.loadingText}>Loading blogs...</Text>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={BlogColors.background} />
+        <LinearGradient
+          colors={[BlogColors.background, BlogColors.surface]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.loadingContainer}>
+          <Animatable.View animation="pulse" iterationCount="infinite">
+            <View style={styles.loadingIcon}>
+              <Icon name="auto-stories" size={60} color={BlogColors.primary} />
+            </View>
+          </Animatable.View>
+          <ActivityIndicator size="large" color={BlogColors.primary} />
+          <Text style={styles.loadingText}>Loading articles...</Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={BlogColors.background} />
+      
+      <LinearGradient
+        colors={[BlogColors.background, BlogColors.surface]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Floating Icons */}
+      <View style={styles.floatingIcons}>
+        <Text style={[styles.floatingIcon, styles.icon1]}>📚</Text>
+        <Text style={[styles.floatingIcon, styles.icon2]}>✍️</Text>
+        <Text style={[styles.floatingIcon, styles.icon3]}>📖</Text>
+        <Text style={[styles.floatingIcon, styles.icon4]}>📝</Text>
+      </View>
+
       <FlatList
         data={blogs}
         keyExtractor={(item) => item._id}
@@ -144,13 +284,14 @@ const BlogsScreen = ({ navigation }) => {
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={renderHeader}
+        ListFooterComponent={blogs.length > 0 ? renderFooter : null}
         ListEmptyComponent={renderEmptyState}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#2196F3']}
-            tintColor="#2196F3"
+            colors={[BlogColors.primary]}
+            tintColor={BlogColors.primary}
           />
         }
       />
@@ -161,107 +302,182 @@ const BlogsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: BlogColors.background,
+  },
+  floatingIcons: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    zIndex: 0,
+  },
+  floatingIcon: {
+    position: 'absolute',
+    fontSize: 24,
+    opacity: 0.1,
+    color: BlogColors.textMuted,
+  },
+  icon1: {
+    top: '10%',
+    right: '5%',
+    transform: [{ rotate: '15deg' }],
+  },
+  icon2: {
+    top: '30%',
+    left: '5%',
+    transform: [{ rotate: '-10deg' }],
+  },
+  icon3: {
+    bottom: '20%',
+    right: '10%',
+    transform: [{ rotate: '25deg' }],
+  },
+  icon4: {
+    bottom: '40%',
+    left: '8%',
+    transform: [{ rotate: '-15deg' }],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+  },
+  loadingIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: BlogColors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 15,
     fontSize: 16,
-    color: '#666',
+    color: BlogColors.textSecondary,
   },
   listContainer: {
     padding: 16,
     paddingBottom: 20,
   },
   header: {
-    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
     paddingVertical: 10,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: 32,
+    fontWeight: '800',
+    color: BlogColors.text,
+    letterSpacing: 1,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: BlogColors.textSecondary,
+    marginTop: 4,
+  },
+  headerStats: {
+    backgroundColor: BlogColors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: BlogColors.border,
+  },
+  statBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statText: {
+    color: BlogColors.textSecondary,
+    fontSize: 13,
+    marginLeft: 6,
+    fontWeight: '500',
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 20,
+    marginBottom: 20,
     overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: BlogColors.border,
+  },
+  cardGradient: {
+    position: 'relative',
+  },
+  cardPattern: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    opacity: 0.1,
+    zIndex: 1,
+  },
+  patternIcon: {
+    fontSize: 20,
+    marginHorizontal: 2,
   },
   imageContainer: {
     position: 'relative',
+    height: 200,
   },
   image: {
     width: '100%',
-    height: 200,
+    height: '100%',
   },
   categoryBadge: {
     position: 'absolute',
     top: 12,
     left: 12,
-    backgroundColor: 'rgba(33, 150, 243, 0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
   },
   categoryText: {
     color: '#fff',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  likesContainer: {
+  likesBadge: {
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
   },
   likesText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
   },
-  info: {
+  content: {
     padding: 16,
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: BlogColors.text,
     marginBottom: 8,
     lineHeight: 24,
   },
   excerpt: {
     fontSize: 14,
-    color: '#666',
+    color: BlogColors.textSecondary,
     lineHeight: 20,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   metaContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginTop: 8,
+    alignItems: 'center',
   },
   authorContainer: {
     flexDirection: 'row',
@@ -269,59 +485,102 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   authorAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#2196F3',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 10,
   },
   authorInitial: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   authorName: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: 13,
+    color: BlogColors.text,
+    fontWeight: '600',
+  },
+  authorRole: {
+    fontSize: 11,
+    color: BlogColors.textMuted,
   },
   metaInfo: {
     alignItems: 'flex-end',
   },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   readTime: {
-    fontSize: 11,
-    color: '#888',
-    marginBottom: 2,
+    fontSize: 12,
+    color: BlogColors.readTime,
+    marginLeft: 4,
+    fontWeight: '500',
   },
   date: {
     fontSize: 11,
-    color: '#888',
+    color: BlogColors.textMuted,
+    marginLeft: 4,
+  },
+  footer: {
+    marginTop: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  footerGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 25,
+    gap: 8,
+  },
+  footerText: {
+    color: BlogColors.primary,
+    fontSize: 13,
+    fontWeight: '500',
   },
   emptyState: {
     alignItems: 'center',
+    justifyContent: 'center',
     paddingTop: 60,
     paddingHorizontal: 40,
   },
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: BlogColors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 22,
+    fontWeight: '800',
+    color: BlogColors.text,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
-    color: '#666',
+    color: BlogColors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#2196F3',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 30,
+    overflow: 'hidden',
+  },
+  retryGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    gap: 8,
   },
   retryButtonText: {
     color: '#fff',

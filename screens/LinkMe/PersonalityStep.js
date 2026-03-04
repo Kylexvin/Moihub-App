@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   SafeAreaView,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
@@ -26,7 +27,81 @@ const PersonalityStep = ({ navigation }) => {
   const [bio, setBio] = useState('');
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({
+    bio: '',
+    interests: '',
+  });
   const { token } = useAuth();
+
+  // Validation states
+  const [bioTouched, setBioTouched] = useState(false);
+  const [interestsTouched, setInterestsTouched] = useState(false);
+
+  // Animated values for validation feedback
+  const [bioErrorAnim] = useState(new Animated.Value(0));
+  const [interestsErrorAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    validateForm();
+  }, [bio, selectedInterests]);
+
+  const validateForm = () => {
+    const errors = {
+      bio: '',
+      interests: '',
+    };
+
+    // Bio validation
+    if (bioTouched) {
+      if (!bio.trim()) {
+        errors.bio = 'Bio is required';
+      } else if (bio.trim().length < 10) {
+        errors.bio = `Bio needs ${10 - bio.trim().length} more characters (minimum 10)`;
+      }
+    }
+
+    // Interests validation
+    if (interestsTouched) {
+      if (selectedInterests.length < 3) {
+        errors.interests = `Select ${3 - selectedInterests.length} more interest${3 - selectedInterests.length === 1 ? '' : 's'}`;
+      }
+    }
+
+    setValidationErrors(errors);
+
+    // Animate error messages
+    if (errors.bio) {
+      Animated.sequence([
+        Animated.timing(bioErrorAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bioErrorAnim, {
+          toValue: 0,
+          duration: 300,
+          delay: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+
+    if (errors.interests) {
+      Animated.sequence([
+        Animated.timing(interestsErrorAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(interestsErrorAnim, {
+          toValue: 0,
+          duration: 300,
+          delay: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  };
 
   const toggleInterest = (interest) => {
     if (selectedInterests.includes(interest)) {
@@ -36,17 +111,42 @@ const PersonalityStep = ({ navigation }) => {
     } else {
       Alert.alert('Maximum Interests', 'You can select up to 5 interests only.');
     }
+    
+    if (!interestsTouched) {
+      setInterestsTouched(true);
+    }
   };
 
   const isFormValid = () => {
     return bio.trim().length >= 10 && selectedInterests.length >= 3;
   };
 
+  const getProgressPercentage = () => {
+    let percentage = 0;
+    if (bio.trim().length >= 10) percentage += 50;
+    if (selectedInterests.length >= 3) percentage += 50;
+    return percentage;
+  };
+
   const handleContinue = async () => {
+    // Mark all fields as touched on submit attempt
+    setBioTouched(true);
+    setInterestsTouched(true);
+    
     if (!isFormValid()) {
+      // Show specific error messages
+      const errorMessages = [];
+      if (bio.trim().length < 10) {
+        errorMessages.push(`• Bio needs at least 10 characters (current: ${bio.length})`);
+      }
+      if (selectedInterests.length < 3) {
+        errorMessages.push(`• Select ${3 - selectedInterests.length} more interest${3 - selectedInterests.length === 1 ? '' : 's'}`);
+      }
+      
       Alert.alert(
-        'Incomplete Profile',
-        'Please add a bio (at least 10 characters) and select at least 3 interests.'
+        'Complete Your Profile',
+        `Please fix the following:\n\n${errorMessages.join('\n')}`,
+        [{ text: 'Got it' }]
       );
       return;
     }
@@ -111,8 +211,16 @@ const PersonalityStep = ({ navigation }) => {
             <View style={styles.stepContainer}>
               <Text style={styles.step}>Step 2 of 4</Text>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '50%' }]} />
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: `${getProgressPercentage()}%` }
+                  ]} 
+                />
               </View>
+              <Text style={styles.progressText}>
+                {getProgressPercentage() === 100 ? 'Ready to continue!' : `${getProgressPercentage()}% complete`}
+              </Text>
             </View>
           </View>
 
@@ -123,30 +231,97 @@ const PersonalityStep = ({ navigation }) => {
             </Text>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Bio</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Bio</Text>
+                <Text style={[
+                  styles.sectionStatus,
+                  bio.trim().length >= 10 && styles.statusValid
+                ]}>
+                  {bio.trim().length >= 10 ? '✓' : 'Required'}
+                </Text>
+              </View>
+              
               <View style={styles.inputContainer}>
                 <TextInput
-                  style={styles.bioInput}
+                  style={[
+                    styles.bioInput,
+                    validationErrors.bio && bioTouched && styles.inputError
+                  ]}
                   placeholder="Write a short bio about yourself..."
                   placeholderTextColor="#999"
                   value={bio}
                   onChangeText={setBio}
+                  onFocus={() => setBioTouched(true)}
+                  onBlur={() => setBioTouched(true)}
                   multiline
                   maxLength={500}
                   textAlignVertical="top"
                 />
                 <View style={styles.inputGlow} />
               </View>
-              <Text style={styles.charCount}>{bio.length}/500</Text>
+              
+              {bioTouched && validationErrors.bio && (
+                <Animated.View 
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{
+                        translateX: bioErrorAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 5]
+                        })
+                      }]
+                    }
+                  ]}
+                >
+                  <Text style={styles.errorText}>⚠️ {validationErrors.bio}</Text>
+                </Animated.View>
+              )}
+              
+              <View style={styles.charCountContainer}>
+                <Text style={[
+                  styles.charCount,
+                  bio.length < 10 && styles.charCountWarning
+                ]}>
+                  {bio.length}/500 {bio.length < 10 && '(min. 10)'}
+                </Text>
+              </View>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Interests ({selectedInterests.length}/5)
-              </Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  Interests ({selectedInterests.length}/5)
+                </Text>
+                <Text style={[
+                  styles.sectionStatus,
+                  selectedInterests.length >= 3 && styles.statusValid
+                ]}>
+                  {selectedInterests.length >= 3 ? '✓' : `${selectedInterests.length}/3`}
+                </Text>
+              </View>
+              
               <Text style={styles.sectionSubtitle}>
                 Select at least 3 interests that describe you
               </Text>
+              
+              {interestsTouched && validationErrors.interests && (
+                <Animated.View 
+                  style={[
+                    styles.errorMessage,
+                    {
+                      transform: [{
+                        translateX: interestsErrorAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 5]
+                        })
+                      }]
+                    }
+                  ]}
+                >
+                  <Text style={styles.errorText}>⚠️ {validationErrors.interests}</Text>
+                </Animated.View>
+              )}
               
               <View style={styles.interestsGrid}>
                 {INTEREST_OPTIONS.map((interest) => (
@@ -180,6 +355,29 @@ const PersonalityStep = ({ navigation }) => {
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {selectedInterests.length < 5 && (
+                <Text style={styles.interestsHelper}>
+                  {5 - selectedInterests.length} interest{5 - selectedInterests.length === 1 ? '' : 's'} remaining
+                </Text>
+              )}
+            </View>
+
+            {/* Quick tips section */}
+            <View style={styles.tipsContainer}>
+              <Text style={styles.tipsTitle}>✨ Quick Tips</Text>
+              <View style={styles.tipItem}>
+                <Text style={styles.tipBullet}>•</Text>
+                <Text style={styles.tipText}>Write about your passions, hobbies, and what makes you unique</Text>
+              </View>
+              <View style={styles.tipItem}>
+                <Text style={styles.tipBullet}>•</Text>
+                <Text style={styles.tipText}>Choose interests that reflect your personality</Text>
+              </View>
+              <View style={styles.tipItem}>
+                <Text style={styles.tipBullet}>•</Text>
+                <Text style={styles.tipText}>More specific interests help find better matches</Text>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -191,7 +389,7 @@ const PersonalityStep = ({ navigation }) => {
               !isFormValid() && styles.continueButtonDisabled
             ]}
             onPress={handleContinue}
-            disabled={loading || !isFormValid()}
+            disabled={loading}
           >
             <LinearGradient
               colors={
@@ -206,9 +404,20 @@ const PersonalityStep = ({ navigation }) => {
               {loading ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.continueButtonText}>
-                  Continue →
-                </Text>
+                <>
+                  <Text style={styles.continueButtonText}>
+                    {isFormValid() ? 'Continue →' : 'Complete Required Fields'}
+                  </Text>
+                  {!isFormValid() && (
+                    <Text style={styles.buttonHelper}>
+                      {bio.trim().length < 10 && selectedInterests.length < 3 
+                        ? 'Bio & interests needed'
+                        : bio.trim().length < 10 
+                        ? 'Bio too short' 
+                        : 'Select more interests'}
+                    </Text>
+                  )}
+                </>
               )}
               {isFormValid() && <View style={styles.buttonGlow} />}
             </LinearGradient>
@@ -321,6 +530,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 2,
     overflow: 'hidden',
+    marginBottom: 4,
   },
   progressFill: {
     height: '100%',
@@ -330,6 +540,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
+  },
+  progressText: {
+    color: '#b19cd9',
+    fontSize: 12,
   },
   content: {
     padding: 20,
@@ -356,14 +570,27 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 25,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 12,
     textShadowColor: 'rgba(123, 32, 161, 0.3)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 4,
+  },
+  sectionStatus: {
+    color: '#ff6b6b',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statusValid: {
+    color: '#4cd964',
   },
   sectionSubtitle: {
     fontSize: 14,
@@ -389,6 +616,10 @@ const styles = StyleSheet.create({
     height: 100,
     textAlignVertical: 'top',
   },
+  inputError: {
+    borderColor: '#ff6b6b',
+    shadowColor: '#ff6b6b',
+  },
   inputGlow: {
     position: 'absolute',
     top: 0,
@@ -399,16 +630,34 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     zIndex: -1,
   },
+  charCountContainer: {
+    marginTop: 6,
+  },
   charCount: {
     color: '#b19cd9',
     fontSize: 14,
     textAlign: 'right',
+  },
+  charCountWarning: {
+    color: '#ff9f43',
+  },
+  errorMessage: {
     marginTop: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    borderRadius: 8,
+  },
+  errorText: {
+    color: '#ff6b6b',
+    fontSize: 13,
+    fontWeight: '500',
   },
   interestsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginTop: 8,
   },
   interestChip: {
     borderRadius: 20,
@@ -436,6 +685,43 @@ const styles = StyleSheet.create({
   interestTextSelected: {
     color: '#ffffff',
     fontWeight: '700',
+  },
+  interestsHelper: {
+    color: '#b19cd9',
+    fontSize: 13,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  tipsContainer: {
+    backgroundColor: 'rgba(123, 32, 161, 0.1)',
+    borderRadius: 15,
+    padding: 16,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(123, 32, 161, 0.3)',
+  },
+  tipsTitle: {
+    color: '#c77dff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  tipItem: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    alignItems: 'flex-start',
+  },
+  tipBullet: {
+    color: '#9d4edd',
+    fontSize: 16,
+    marginRight: 8,
+    lineHeight: 20,
+  },
+  tipText: {
+    color: '#e0e0e0',
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
   },
   footer: {
     padding: 20,
@@ -479,6 +765,11 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
     zIndex: 1,
+  },
+  buttonHelper: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginTop: 4,
   },
 });
 

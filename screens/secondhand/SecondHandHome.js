@@ -615,7 +615,7 @@ const SecondHandHome = () => {
           onPress={() => navigation.navigate('SecondHandStack', { screen: 'MarketplaceDashboard' })}
           style={Components.buttonPrimary}
         >
-          <Text style={Components.buttonTextPrimary}>Go to Dashboard</Text>
+          <Text style={Components.buttonTextPrimary}>Post Item ➕</Text>
         </TouchableOpacity>
       </View>
 

@@ -8,13 +8,32 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert
+  Alert,
+  Dimensions,
+  StatusBar
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import * as Animatable from 'react-native-animatable';
 import * as foodApi from '../../services/foodApi';
 import { useAuth } from '../../context/AuthContext';
 import { useFoodContext } from '../../context/FoodContext';
+
+const { width } = Dimensions.get('window');
+
+// Food-themed color palette matching other screens
+const FoodColors = {
+  primary: '#FF6B35',      // Tangy Orange
+  secondary: '#F7C35C',    // Honey Yellow
+  accent: '#EF476F',       // Watermelon Pink
+  success: '#06D6A0',      // Mint Green
+  warning: '#FF9F1C',      // Pumpkin Orange
+  background: '#0a0a0a',
+  card: '#1a1a1a',
+  text: '#FFFFFF',
+  textSecondary: '#FFE5D9', // Cream
+};
 
 const MyOrdersScreen = () => {
   const [orders, setOrders] = useState([]);
@@ -127,12 +146,23 @@ const MyOrdersScreen = () => {
 
   const getStatusColor = (status) => {
     switch (status.toLowerCase()) {
-      case 'pending': return '#FFA000'; // amber
+      case 'pending': return FoodColors.warning; // amber/orange
       case 'preparing': return '#1976D2'; // blue
-      case 'ready': return '#7CB342'; // light green
-      case 'delivered': return '#43A047'; // green
-      case 'cancelled': return '#E53935'; // red
-      default: return '#757575'; // grey
+      case 'ready': return FoodColors.success; // mint green
+      case 'delivered': return FoodColors.success; // mint green
+      case 'cancelled': return FoodColors.accent; // watermelon pink
+      default: return FoodColors.textSecondary; // grey
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status.toLowerCase()) {
+      case 'pending': return 'time-outline';
+      case 'preparing': return 'restaurant-outline';
+      case 'ready': return 'checkmark-circle-outline';
+      case 'delivered': return 'checkmark-done-outline';
+      case 'cancelled': return 'close-circle-outline';
+      default: return 'information-circle-outline';
     }
   };
 
@@ -147,7 +177,7 @@ const MyOrdersScreen = () => {
     });
   };
 
-  const renderOrderItem = ({ item }) => {
+  const renderOrderItem = ({ item, index }) => {
     // Find vendor from context if available
     let vendorName = 'Restaurant';
     let vendorLocation = '';
@@ -168,44 +198,106 @@ const MyOrdersScreen = () => {
     }
     
     return (
-      <TouchableOpacity 
-        style={styles.orderCard}
-        
+      <Animatable.View
+        animation="fadeInUp"
+        delay={index * 100}
+        duration={500}
       >
-        <View style={styles.orderHeader}>
-          <Text style={styles.orderId}>Order #{item._id.substring(item._id.length - 6)}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-            <Text style={styles.statusText}>{item.status.charAt(0).toUpperCase() + item.status.slice(1)}</Text>
-          </View>
-        </View>
-        
-        <View style={styles.orderInfo}>
-          <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
-          <Text style={styles.orderPrice}>Ksh {item.totalPrice}</Text>
-        </View>
-        
-        <View style={styles.orderFooter}>
-          <Ionicons name="restaurant-outline" size={18} color='#fe5722' />
-          <Text style={styles.vendorText}>
-            {vendorName} {vendorLocation ? `• ${vendorLocation}` : ''} • {item.items.length} item(s)
-          </Text>
-        </View>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.orderCard}
+          activeOpacity={0.9}
+        >
+          <LinearGradient
+            colors={['rgba(255,107,53,0.05)', 'rgba(247,195,92,0.02)']}
+            style={styles.cardGradient}
+          >
+            {/* Order Header */}
+            <View style={styles.orderHeader}>
+              <View style={styles.orderIdContainer}>
+                <Ionicons name="receipt-outline" size={18} color={FoodColors.primary} />
+                <Text style={styles.orderId}>Order #{item._id.substring(item._id.length - 8)}</Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+                <Ionicons name={getStatusIcon(item.status)} size={12} color="#fff" />
+                <Text style={styles.statusText}>
+                  {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                </Text>
+              </View>
+            </View>
+            
+            {/* Order Details */}
+            <View style={styles.orderInfo}>
+              <View style={styles.infoRow}>
+                <Ionicons name="calendar-outline" size={14} color={FoodColors.textSecondary} />
+                <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="pricetag-outline" size={14} color={FoodColors.textSecondary} />
+                <Text style={styles.orderPrice}>Ksh {item.totalPrice}</Text>
+              </View>
+            </View>
+            
+            {/* Order Footer */}
+            <View style={styles.orderFooter}>
+              <View style={styles.vendorInfo}>
+                <Ionicons name="restaurant-outline" size={16} color={FoodColors.primary} />
+                <Text style={styles.vendorText} numberOfLines={1}>
+                  {vendorName}
+                </Text>
+              </View>
+              <View style={styles.itemsBadge}>
+                <Text style={styles.itemsCount}>{item.items.length} item(s)</Text>
+              </View>
+            </View>
+
+            {/* Decorative Food Emoji */}
+            <Text style={styles.cardFoodEmoji}>🍽️</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animatable.View>
     );
   };
 
   if (loading && !refreshing && orders.length === 0) {
     return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#004d40" />
-        <Text style={styles.loadingText}>Loading your orders...</Text>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[FoodColors.background, '#1a1a1a', FoodColors.background]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.loaderContainer}>
+          <Animatable.View animation="pulse" iterationCount="infinite">
+            <Text style={styles.loaderEmoji}>🍳</Text>
+          </Animatable.View>
+          <ActivityIndicator size="large" color={FoodColors.primary} />
+          <Text style={styles.loadingText}>Loading your orders...</Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <LinearGradient
+        colors={[FoodColors.background, '#1a1a1a', FoodColors.background]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Floating Food Emojis */}
+      <View style={styles.floatingFoods}>
+        <Text style={[styles.floatingFood, styles.food1]}>🍕</Text>
+        <Text style={[styles.floatingFood, styles.food2]}>🍔</Text>
+        <Text style={[styles.floatingFood, styles.food3]}>🌮</Text>
+        <Text style={[styles.floatingFood, styles.food4]}>🍣</Text>
+      </View>
+
+      <StatusBar barStyle="light-content" backgroundColor={FoodColors.background} />
+
+      {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={FoodColors.primary} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>My Orders</Text>
         {orders.length > 0 && (
           <TouchableOpacity 
@@ -213,32 +305,56 @@ const MyOrdersScreen = () => {
             onPress={handleClearOrders}
             disabled={clearingOrders}
           >
-            {clearingOrders ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Ionicons name="brush-outline" size={22} color="#fff" />
-            )}
+            <LinearGradient
+              colors={[FoodColors.accent + '20', FoodColors.accent + '10']}
+              style={styles.clearButtonGradient}
+            >
+              {clearingOrders ? (
+                <ActivityIndicator size="small" color={FoodColors.accent} />
+              ) : (
+                <Ionicons name="brush-outline" size={20} color={FoodColors.accent} />
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         )}
       </View>
 
       {error && orders.length === 0 ? (
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={60} color="#FF6B6B" />
+          <View style={styles.errorIcon}>
+            <Text style={styles.errorEmoji}>😋</Text>
+          </View>
+          <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <LinearGradient
+              colors={[FoodColors.primary, FoodColors.primary + 'dd']}
+              style={styles.retryGradient}
+            >
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       ) : orders.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="receipt-outline" size={80} color="#b0bec5" />
-          <Text style={styles.emptyText}>You don't have any orders yet</Text>
+          <View style={styles.emptyIcon}>
+            <Text style={styles.emptyEmoji}>📋</Text>
+          </View>
+          <Text style={styles.emptyTitle}>No orders yet</Text>
+          <Text style={styles.emptyText}>
+            Looks like you haven't placed any food orders
+          </Text>
           <TouchableOpacity
             style={styles.shopButton}
             onPress={() => navigation.navigate('FoodHome')}
           >
-            <Text style={styles.shopButtonText}>Start Ordering</Text>
+            <LinearGradient
+              colors={[FoodColors.primary, FoodColors.primary + 'dd']}
+              style={styles.shopButtonGradient}
+            >
+              <Text style={styles.shopButtonText}>Browse Restaurants</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       ) : (
@@ -247,12 +363,13 @@ const MyOrdersScreen = () => {
           renderItem={renderOrderItem}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#004d40']}
-              tintColor="#004d40"
+              colors={[FoodColors.primary]}
+              tintColor={FoodColors.primary}
             />
           }
           onEndReached={loadMoreOrders}
@@ -260,7 +377,7 @@ const MyOrdersScreen = () => {
           ListFooterComponent={
             loading && orders.length > 0 ? (
               <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color="#004d40" />
+                <ActivityIndicator size="small" color={FoodColors.primary} />
                 <Text style={styles.footerLoaderText}>Loading more...</Text>
               </View>
             ) : null
@@ -274,93 +391,88 @@ const MyOrdersScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'ivory',
+    backgroundColor: FoodColors.background,
+  },
+  floatingFoods: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    zIndex: 0,
+  },
+  floatingFood: {
+    position: 'absolute',
+    fontSize: 24,
+    opacity: 0.1,
+  },
+  food1: {
+    top: '10%',
+    right: '5%',
+    transform: [{ rotate: '15deg' }],
+  },
+  food2: {
+    top: '30%',
+    left: '5%',
+    transform: [{ rotate: '-10deg' }],
+  },
+  food3: {
+    bottom: '20%',
+    right: '10%',
+    transform: [{ rotate: '25deg' }],
+  },
+  food4: {
+    bottom: '40%',
+    left: '8%',
+    transform: [{ rotate: '-15deg' }],
   },
   header: {
-    backgroundColor:'#fe5722',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    elevation: 3,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    zIndex: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,107,53,0.1)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: '700',
+    color: FoodColors.text,
   },
   clearButton: {
-    padding: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    overflow: 'hidden',
   },
-  loaderContainer: {
-    flex: 1,
+  clearButtonGradient: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#004d40',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#ff5252',
-    textAlign: 'center',
-    marginVertical: 16,
-  },
-  retryButton: {
-    backgroundColor: '#004d40',
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyText: {
-    fontSize: 18,
-    marginTop: 12,
-    color: '#78909c',
-  },
-  shopButton: {
-    backgroundColor: '#004d40',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    marginTop: 20,
-    elevation: 2,
-  },
-  shopButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(239,71,111,0.3)',
+    borderRadius: 20,
   },
   listContainer: {
     padding: 16,
+    paddingTop: 8,
   },
   orderCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
+    marginBottom: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,53,0.1)',
+  },
+  cardGradient: {
     padding: 16,
-    marginBottom: 16,
-    elevation: 2,
+    position: 'relative',
   },
   orderHeader: {
     flexDirection: 'row',
@@ -368,19 +480,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  orderIdContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   orderId: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#004d40',
+    color: FoodColors.text,
+    marginLeft: 6,
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 15,
+    borderRadius: 20,
+    gap: 4,
   },
   statusText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   orderInfo: {
@@ -388,26 +508,164 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   orderDate: {
-    fontSize: 14,
-    color: '#757575',
+    fontSize: 13,
+    color: FoodColors.textSecondary,
+    marginLeft: 6,
   },
   orderPrice: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#00695c',
+    fontSize: 15,
+    fontWeight: '700',
+    color: FoodColors.primary,
+    marginLeft: 6,
   },
   orderFooter: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: 'rgba(255,107,53,0.1)',
     paddingTop: 12,
+  },
+  vendorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   vendorText: {
     marginLeft: 8,
     fontSize: 14,
-    color: '#004d40',
+    color: FoodColors.text,
+    fontWeight: '500',
+    flex: 1,
+  },
+  itemsBadge: {
+    backgroundColor: 'rgba(255,107,53,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  itemsCount: {
+    fontSize: 11,
+    color: FoodColors.primary,
+    fontWeight: '600',
+  },
+  cardFoodEmoji: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    fontSize: 32,
+    opacity: 0.1,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loaderEmoji: {
+    fontSize: 50,
+    marginBottom: 20,
+  },
+  loadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: FoodColors.textSecondary,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+  errorIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,107,53,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  errorEmoji: {
+    fontSize: 50,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: FoodColors.primary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: FoodColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 22,
+  },
+  retryButton: {
+    borderRadius: 30,
+    overflow: 'hidden',
+  },
+  retryGradient: {
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,107,53,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyEmoji: {
+    fontSize: 60,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: FoodColors.primary,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: FoodColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  shopButton: {
+    borderRadius: 30,
+    overflow: 'hidden',
+  },
+  shopButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  shopButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   footerLoader: {
     paddingVertical: 20,
@@ -415,7 +673,7 @@ const styles = StyleSheet.create({
   },
   footerLoaderText: {
     fontSize: 14,
-    color: '#004d40',
+    color: FoodColors.textSecondary,
     marginTop: 8,
   },
 });

@@ -11,14 +11,326 @@ import {
   Alert,
   Image,
   RefreshControl,
-  ScrollView,
+  Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import axios from 'axios';
-import { useAuth } from '../../context/AuthContext'; // Adjust path as needed
+import { useAuth } from '../../context/AuthContext';
+import theme from '../theme/Theme';
 
+const { width } = Dimensions.get('window');
 const API_URL = 'https://moihub.onrender.com/api';
 
+// Modular Components
+const Header = ({ navigation, title, username }) => (
+  <LinearGradient
+    colors={theme.Gradients.green}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={styles.header}
+  >
+    <TouchableOpacity 
+      onPress={() => navigation.goBack()}
+      style={styles.headerButton}
+    >
+      <Icon name="arrow-back" size={24} color={theme.Colors.white} />
+    </TouchableOpacity>
+    <Text style={styles.headerTitle}>
+      {username ? `📋 ${username}'s Orders` : title}
+    </Text>
+    <TouchableOpacity 
+      onPress={() => navigation.navigate('EshopHome')}
+      style={styles.headerButton}
+    >
+      <Icon name="home" size={22} color={theme.Colors.white} />
+    </TouchableOpacity>
+  </LinearGradient>
+);
+
+const StatusBadge = ({ status }) => {
+  const getStatusConfig = (status) => {
+    const statusMap = {
+      pending: { color: theme.Colors.warning, icon: 'schedule', label: 'PENDING' },
+      confirmed: { color: theme.Colors.info, icon: 'check-circle', label: 'CONFIRMED' },
+      processing: { color: theme.Colors.accent, icon: 'settings', label: 'PROCESSING' },
+      shipped: { color: theme.Colors.primary, icon: 'local-shipping', label: 'SHIPPED' },
+      delivered: { color: theme.Colors.success, icon: 'done-all', label: 'DELIVERED' },
+      cancelled: { color: theme.Colors.danger, icon: 'cancel', label: 'CANCELLED' },
+    };
+    return statusMap[status.toLowerCase()] || statusMap.pending;
+  };
+
+  const config = getStatusConfig(status);
+
+  return (
+    <LinearGradient
+      colors={[config.color, `${config.color}dd`]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.statusBadge}
+    >
+      <Icon name={config.icon} size={14} color={theme.Colors.white} />
+      <Text style={styles.statusText}>{config.label}</Text>
+    </LinearGradient>
+  );
+};
+
+const OrderItemCard = ({ item, isExpanded, onToggle, navigation }) => {
+  const formatPrice = (price) => `KSh ${price.toLocaleString()}`;
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const handleViewProduct = (product) => {
+    navigation.navigate('ProductDetail', {
+      productId: product._id,
+      productName: product.name,
+    });
+  };
+
+  const handleTrackOrder = () => {
+    Alert.alert('Track Order', 'Tracking feature coming soon!');
+  };
+
+  const handleContactShop = () => {
+    Alert.alert('Contact Shop', `Contact ${item.shop.shopName} coming soon!`);
+  };
+
+  return (
+    <View style={[theme.Components.card, styles.orderCard]}>
+      <TouchableOpacity
+        style={styles.orderHeader}
+        onPress={onToggle}
+        activeOpacity={0.7}
+      >
+        <View style={styles.orderInfo}>
+          <View style={styles.orderMeta}>
+            <Text style={[theme.Typography.h3, styles.orderId]}>#{item._id.slice(-8)}</Text>
+            <Text style={[theme.Typography.caption, styles.orderDate]}>{formatDate(item.createdAt)}</Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.shopInfo}
+            onPress={() => navigation.navigate('ShopProducts', {
+              shopId: item.shop._id,
+              shopName: item.shop.shopName,
+            })}
+          >
+            <Icon name="store" size={14} color={theme.Colors.primary} />
+            <Text style={[theme.Typography.bodySmall, styles.shopName]}>{item.shop.shopName}</Text>
+            <Icon name="chevron-right" size={16} color={theme.Colors.primary} />
+          </TouchableOpacity>
+          
+          <View style={styles.orderSummary}>
+            <Text style={[theme.Typography.caption, styles.itemCount]}>
+              {item.items.length} item{item.items.length !== 1 ? 's' : ''}
+            </Text>
+            <Text style={[theme.Typography.h3, styles.totalAmount]}>{formatPrice(item.totalAmount)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.orderRight}>
+          <StatusBadge status={item.status} />
+          <Icon 
+            name={isExpanded ? 'expand-less' : 'expand-more'} 
+            size={24} 
+            color={theme.Colors.textSecondary} 
+          />
+        </View>
+      </TouchableOpacity>
+
+      {isExpanded && (
+        <View style={styles.orderDetails}>
+          <View style={styles.divider} />
+          
+          {/* Items Section */}
+          <View style={styles.detailSection}>
+            <Text style={[theme.Typography.bodySmall, styles.sectionTitle]}>
+              <Icon name="shopping-bag" size={16} color={theme.Colors.primary} /> ITEMS ORDERED
+            </Text>
+            {item.items.map((orderItem, index) => (
+              <TouchableOpacity 
+                key={index} 
+                style={styles.itemRow}
+                onPress={() => handleViewProduct(orderItem.product)}
+              >
+                <Image
+                  source={{ uri: orderItem.product.image }}
+                  style={styles.productImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.itemDetails}>
+                  <Text style={[theme.Typography.body, styles.productName]} numberOfLines={2}>
+                    {orderItem.product.name}
+                  </Text>
+                  <View style={styles.itemMeta}>
+                    <Text style={[theme.Typography.caption, styles.quantity]}>
+                      Qty: {orderItem.quantity}
+                    </Text>
+                    <Text style={[theme.Typography.bodySmall, styles.price]}>
+                      {formatPrice(orderItem.price)}
+                    </Text>
+                  </View>
+                </View>
+                <Icon name="chevron-right" size={20} color={theme.Colors.textSecondary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Shipping Section */}
+          <View style={styles.detailSection}>
+            <Text style={[theme.Typography.bodySmall, styles.sectionTitle]}>
+              <Icon name="local-shipping" size={16} color={theme.Colors.primary} /> SHIPPING DETAILS
+            </Text>
+            <View style={styles.infoRow}>
+              <Icon name="location-on" size={16} color={theme.Colors.primary} />
+              <Text style={[theme.Typography.bodySmall, styles.infoText]}>{item.shippingAddress}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Icon name="phone" size={16} color={theme.Colors.primary} />
+              <Text style={[theme.Typography.bodySmall, styles.infoText]}>{item.contactNumber}</Text>
+            </View>
+          </View>
+
+          {/* Summary Section */}
+          <LinearGradient
+            colors={[theme.Colors.primaryLight, 'rgba(80, 200, 120, 0.02)']}
+            style={styles.summarySection}
+          >
+            <View style={styles.summaryRow}>
+              <Text style={[theme.Typography.caption, styles.summaryLabel]}>Subtotal</Text>
+              <Text style={[theme.Typography.body, styles.summaryValue]}>{formatPrice(item.totalAmount)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={[theme.Typography.caption, styles.summaryLabel]}>Shipping</Text>
+              <Text style={[theme.Typography.body, styles.summaryValue]}>Free</Text>
+            </View>
+            <View style={[styles.summaryRow, styles.totalRow]}>
+              <Text style={[theme.Typography.h3, styles.totalLabel]}>Total</Text>
+              <Text style={[theme.Typography.h2, styles.totalValue]}>{formatPrice(item.totalAmount)}</Text>
+            </View>
+          </LinearGradient>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={handleTrackOrder}
+            >
+              <LinearGradient
+                colors={[theme.Colors.info, '#2980b9']}
+                style={styles.actionButtonGradient}
+              >
+                <Icon name="track-changes" size={18} color={theme.Colors.white} />
+                <Text style={[theme.Typography.button, styles.actionButtonText]}>Track</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={handleContactShop}
+            >
+              <LinearGradient
+                colors={[theme.Colors.accent, '#7d5ba6']}
+                style={styles.actionButtonGradient}
+              >
+                <Icon name="message" size={18} color={theme.Colors.white} />
+                <Text style={[theme.Typography.button, styles.actionButtonText]}>Contact</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('ShopProducts', {
+                shopId: item.shop._id,
+                shopName: item.shop.shopName,
+              })}
+            >
+              <LinearGradient
+                colors={[theme.Colors.primary, theme.Colors.primaryDark]}
+                style={styles.actionButtonGradient}
+              >
+                <Icon name="shopping-cart" size={18} color={theme.Colors.white} />
+                <Text style={[theme.Typography.button, styles.actionButtonText]}>Shop Again</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          {/* Reorder Button */}
+          {item.status.toLowerCase() === 'delivered' && (
+            <TouchableOpacity 
+              style={styles.reorderButton}
+              onPress={() => {
+                Alert.alert('Reorder', 'Add all items to cart?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { 
+                    text: 'Reorder', 
+                    onPress: () => navigation.navigate('Cart')
+                  }
+                ]);
+              }}
+            >
+              <LinearGradient
+                colors={[theme.Colors.success, theme.Colors.primary]}
+                style={styles.reorderGradient}
+              >
+                <Icon name="refresh" size={20} color={theme.Colors.white} />
+                <Text style={[theme.Typography.button, styles.reorderText]}>Reorder All Items</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+    </View>
+  );
+};
+
+const EmptyState = ({ navigation }) => (
+  <LinearGradient
+    colors={[theme.Colors.primaryDark, theme.Colors.background]}
+    style={styles.emptyState}
+  >
+    <View style={[styles.emptyIconContainer, { backgroundColor: theme.Colors.primaryLight }]}>
+      <Icon name="shopping-bag" size={64} color={theme.Colors.primary} />
+    </View>
+    <Text style={[theme.Typography.h2, styles.emptyTitle]}>No Orders Yet</Text>
+    <Text style={[theme.Typography.body, styles.emptyMessage]}>
+      Your orders will appear here once you start shopping at our stores.
+    </Text>
+    
+    <TouchableOpacity 
+      style={styles.shopButton}
+      onPress={() => navigation.navigate('EshopHome')}
+    >
+      <LinearGradient
+        colors={[theme.Colors.primary, theme.Colors.primaryDark]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.buttonGradient}
+      >
+        <Text style={[theme.Typography.button, styles.shopButtonText]}>Browse Shops</Text>
+        <Icon name="arrow-forward" size={20} color={theme.Colors.white} />
+      </LinearGradient>
+    </TouchableOpacity>
+
+  </LinearGradient>
+);
+
+const LoadingFooter = () => (
+  <View style={styles.loadingFooter}>
+    <ActivityIndicator size="small" color={theme.Colors.primary} />
+    <Text style={[theme.Typography.caption, styles.loadingText]}>Loading more orders...</Text>
+  </View>
+);
+
+// Main Component
 const OrdersScreen = ({ navigation }) => {
   const { isAuthenticated, token, currentUser } = useAuth();
   const [orders, setOrders] = useState([]);
@@ -33,20 +345,15 @@ const OrdersScreen = ({ navigation }) => {
     if (isAuthenticated && token) {
       fetchOrders();
     } else {
-      // Redirect to login if not authenticated
       navigation.replace('Login');
     }
   }, [isAuthenticated, token]);
 
   const fetchOrders = async (page = 1, isRefresh = false) => {
     try {
-      if (page === 1) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
+      if (page === 1) setLoading(true);
+      else setLoadingMore(true);
 
-      // Using axios which already has the auth header set from context
       const response = await axios.get(
         `${API_URL}/eshop/orders/my-orders?page=${page}&limit=10`
       );
@@ -57,30 +364,19 @@ const OrdersScreen = ({ navigation }) => {
         if (page === 1 || isRefresh) {
           setOrders(data.data);
         } else {
-          setOrders(prevOrders => [...prevOrders, ...data.data]);
+          setOrders(prev => [...prev, ...data.data]);
         }
         setCurrentPage(data.currentPage);
         setTotalPages(data.totalPages);
-      } else {
-        Alert.alert('Error', 'Failed to fetch orders');
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
-      
-      // Handle authentication errors
       if (error.response?.status === 401) {
-        Alert.alert(
-          'Authentication Error', 
-          'Your session has expired. Please login again.',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.replace('Login')
-            }
-          ]
-        );
+        Alert.alert('Session Expired', 'Please login again', [
+          { text: 'OK', onPress: () => navigation.replace('Login') }
+        ]);
       } else {
-        Alert.alert('Error', 'Network error. Please check your connection.');
+        Alert.alert('Error', 'Failed to fetch orders');
       }
     } finally {
       setLoading(false);
@@ -110,222 +406,17 @@ const OrdersScreen = ({ navigation }) => {
     setExpandedOrders(newExpanded);
   };
 
-
-
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return '#f59e0b';
-      case 'confirmed':
-        return '#3b82f6';
-      case 'processing':
-        return '#8b5cf6';
-      case 'shipped':
-        return '#06b6d4';
-      case 'delivered':
-        return '#10b981';
-      case 'cancelled':
-        return '#ef4444';
-      default:
-        return '#6b7280';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return 'schedule';
-      case 'confirmed':
-        return 'check-circle';
-      case 'processing':
-        return 'settings';
-      case 'shipped':
-        return 'local-shipping';
-      case 'delivered':
-        return 'done-all';
-      case 'cancelled':
-        return 'cancel';
-      default:
-        return 'info';
-    }
-  };
-
-  const formatPrice = (price) => {
-    return `KSh ${price.toLocaleString()}`;
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const renderOrderItem = ({ item }) => {
-    const isExpanded = expandedOrders.has(item._id);
-    const statusColor = getStatusColor(item.status);
-    const statusIcon = getStatusIcon(item.status);
-
-    return (
-      <View style={styles.orderCard}>
-        <TouchableOpacity
-          style={styles.orderHeader}
-          onPress={() => toggleOrderExpansion(item._id)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.orderInfo}>
-            <View style={styles.orderMeta}>
-              <Text style={styles.orderId}>Order #{item._id.slice(-8)}</Text>
-              <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
-            </View>
-            
-            <View style={styles.shopInfo}>
-              <Icon name="store" size={16} color="#666" />
-              <Text style={styles.shopName}>{item.shop.shopName}</Text>
-            </View>
-            
-            <View style={styles.orderSummary}>
-              <Text style={styles.itemCount}>
-                {item.items.length} item{item.items.length !== 1 ? 's' : ''}
-              </Text>
-              <Text style={styles.totalAmount}>{formatPrice(item.totalAmount)}</Text>
-            </View>
-          </View>
-
-          <View style={styles.orderRight}>
-            <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-              <Icon name={statusIcon} size={14} color="white" />
-              <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
-            </View>
-            
-            <Icon 
-              name={isExpanded ? 'expand-less' : 'expand-more'} 
-              size={24} 
-              color="#666" 
-            />
-          </View>
-        </TouchableOpacity>
-
-        {isExpanded && (
-          <View style={styles.orderDetails}>
-            <View style={styles.separator} />
-            
-            {/* Order Items */}
-            <View style={styles.itemsSection}>
-              <Text style={styles.sectionTitle}>Items Ordered</Text>
-              {item.items.map((orderItem, index) => (
-                <View key={index} style={styles.itemRow}>
-                  <Image
-                    source={{ uri: orderItem.product.image }}
-                    style={styles.productImage}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.itemDetails}>
-                    <Text style={styles.productName} numberOfLines={2}>
-                      {orderItem.product.name}
-                    </Text>
-                    <View style={styles.itemMeta}>
-                      <Text style={styles.quantity}>Qty: {orderItem.quantity}</Text>
-                      <Text style={styles.price}>{formatPrice(orderItem.price)}</Text>
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-
-            {/* Shipping Information */}
-            <View style={styles.shippingSection}>
-              <Text style={styles.sectionTitle}>Shipping Information</Text>
-              <View style={styles.infoRow}>
-                <Icon name="location-on" size={16} color="#666" />
-                <Text style={styles.infoText}>{item.shippingAddress}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Icon name="phone" size={16} color="#666" />
-                <Text style={styles.infoText}>{item.contactNumber}</Text>
-              </View>
-            </View>
-
-            {/* Order Summary */}
-            <View style={styles.summarySection}>
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Order Total:</Text>
-                <Text style={styles.summaryValue}>{formatPrice(item.totalAmount)}</Text>
-              </View>
-            </View>
-
-            {/* Action Buttons */}
-            {/* <View style={styles.actionButtons}>
-              {item.status.toLowerCase() === 'pending' && (
-                <TouchableOpacity 
-                  style={styles.cancelButton}
-                  onPress={() => cancelOrder(item._id)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel Order</Text>
-                </TouchableOpacity>
-              )}
-              
-              <TouchableOpacity 
-                style={styles.trackButton}
-                onPress={() => navigation.navigate('OrderTracking', { orderId: item._id })}
-              >
-                <Icon name="track-changes" size={16} color="white" />
-                <Text style={styles.trackButtonText}>Track Order</Text>
-              </TouchableOpacity>
-            </View> */}
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!loadingMore) return null;
-    
-    return (
-      <View style={styles.loadingFooter}>
-        <ActivityIndicator size="small" color="#007bff" />
-        <Text style={styles.loadingText}>Loading more orders...</Text>
-      </View>
-    );
-  };
-
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Icon name="shopping-bag" size={64} color="#ccc" />
-      <Text style={styles.emptyTitle}>No Orders Found</Text>
-      <Text style={styles.emptyMessage}>
-        You haven't placed any orders yet. Start shopping to see your orders here.
-      </Text>
-      <TouchableOpacity 
-        style={styles.shopButton}
-        onPress={() => navigation.navigate('Home')}
-      >
-        <Text style={styles.shopButtonText}>Start Shopping</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  // Show loading while checking authentication
   if (!isAuthenticated || loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Icon name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Orders</Text>
-        </View>
+        <Header 
+          navigation={navigation} 
+          title="My Orders" 
+          username={currentUser?.username}
+        />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007bff" />
-          <Text style={styles.loadingText}>Loading your orders...</Text>
+          <ActivityIndicator size="large" color={theme.Colors.primary} />
+          <Text style={[theme.Typography.body, styles.loadingMainText]}>Loading your orders...</Text>
         </View>
       </SafeAreaView>
     );
@@ -333,25 +424,37 @@ const OrdersScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        
+      <Header 
+        navigation={navigation} 
+        title="My Orders" 
+        username={currentUser?.username}
+      />
       
-        
-      </View>
-
       <FlatList
         data={orders}
-        renderItem={renderOrderItem}
+        renderItem={({ item }) => (
+          <OrderItemCard
+            item={item}
+            isExpanded={expandedOrders.has(item._id)}
+            onToggle={() => toggleOrderExpansion(item._id)}
+            navigation={navigation}
+          />
+        )}
         keyExtractor={(item) => item._id}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={theme.Colors.primary}
+            colors={[theme.Colors.primary]}
+          />
         }
         onEndReached={loadMoreOrders}
         onEndReachedThreshold={0.1}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={renderEmptyState}
-        contentContainerStyle={orders.length === 0 ? styles.emptyContainer : styles.listContainer}
+        ListFooterComponent={loadingMore ? <LoadingFooter /> : null}
+        ListEmptyComponent={<EmptyState navigation={navigation} />}
+        contentContainerStyle={styles.listContainer}
       />
     </SafeAreaView>
   );
@@ -360,52 +463,43 @@ const OrdersScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.Colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'white',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.Spacing.lg,
+    paddingVertical: theme.Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: theme.Colors.cardBorder,
   },
-  backButton: {
-    marginRight: 12,
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.BorderRadius.round,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: theme.Colors.white,
+    letterSpacing: 0.5,
     flex: 1,
-  },
-  userInfo: {
-    fontSize: 12,
-    color: '#666',
+    textAlign: 'center',
   },
   listContainer: {
-    padding: 16,
-  },
-  emptyContainer: {
-    flex: 1,
+    padding: theme.Spacing.md,
+    paddingBottom: theme.Spacing.xl,
   },
   orderCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: theme.Spacing.md,
   },
   orderHeader: {
     flexDirection: 'row',
-    padding: 16,
+    padding: theme.Spacing.md,
     alignItems: 'center',
   },
   orderInfo: {
@@ -415,26 +509,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: theme.Spacing.xs,
   },
   orderId: {
+    color: theme.Colors.white,
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
   },
   orderDate: {
-    fontSize: 12,
-    color: '#666',
+    color: theme.Colors.textSecondary,
   },
   shopInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: theme.Spacing.xs,
   },
   shopName: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 4,
+    color: theme.Colors.primary,
+    marginLeft: theme.Spacing.xs,
+    marginRight: theme.Spacing.xs,
+    fontWeight: '500',
   },
   orderSummary: {
     flexDirection: 'row',
@@ -442,68 +535,68 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemCount: {
-    fontSize: 14,
-    color: '#666',
+    color: theme.Colors.textSecondary,
   },
   totalAmount: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    color: theme.Colors.primary,
   },
   orderRight: {
     alignItems: 'flex-end',
+    marginLeft: theme.Spacing.sm,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 8,
+    paddingHorizontal: theme.Spacing.sm,
+    paddingVertical: theme.Spacing.xs,
+    borderRadius: theme.BorderRadius.round,
+    marginBottom: theme.Spacing.xs,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'white',
-    marginLeft: 4,
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.Colors.white,
+    marginLeft: theme.Spacing.xs,
+    letterSpacing: 0.5,
   },
   orderDetails: {
-    paddingBottom: 16,
+    padding: theme.Spacing.md,
+    paddingTop: 0,
   },
-  separator: {
+  divider: {
     height: 1,
-    backgroundColor: '#e9ecef',
-    marginHorizontal: 16,
-    marginBottom: 16,
+    backgroundColor: theme.Colors.cardBorder,
+    marginBottom: theme.Spacing.md,
   },
-  itemsSection: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
+  detailSection: {
+    marginBottom: theme.Spacing.lg,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
+    color: theme.Colors.primary,
+    marginBottom: theme.Spacing.sm,
+    letterSpacing: 1,
+    fontWeight: '700',
   },
   itemRow: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: theme.Spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: theme.BorderRadius.md,
+    padding: theme.Spacing.xs,
+    alignItems: 'center',
   },
   productImage: {
     width: 60,
     height: 60,
-    borderRadius: 8,
-    marginRight: 12,
+    borderRadius: theme.BorderRadius.sm,
+    marginRight: theme.Spacing.sm,
   },
   itemDetails: {
     flex: 1,
   },
   productName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 4,
+    color: theme.Colors.white,
+    marginBottom: theme.Spacing.xs,
   },
   itemMeta: {
     flexDirection: 'row',
@@ -511,128 +604,159 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   quantity: {
-    fontSize: 12,
-    color: '#666',
+    color: theme.Colors.textSecondary,
   },
   price: {
-    fontSize: 14,
+    color: theme.Colors.primary,
     fontWeight: '600',
-    color: '#007bff',
-  },
-  shippingSection: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: theme.Spacing.xs,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    padding: theme.Spacing.sm,
+    borderRadius: theme.BorderRadius.sm,
   },
   infoText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
+    color: theme.Colors.text,
+    marginLeft: theme.Spacing.sm,
     flex: 1,
   },
   summarySection: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    borderRadius: theme.BorderRadius.md,
+    padding: theme.Spacing.md,
+    marginTop: theme.Spacing.xs,
+    marginBottom: theme.Spacing.md,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    marginBottom: theme.Spacing.xs,
   },
   summaryLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    color: theme.Colors.textSecondary,
   },
   summaryValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#007bff',
+    color: theme.Colors.text,
+    fontWeight: '500',
+  },
+  totalRow: {
+    marginTop: theme.Spacing.xs,
+    paddingTop: theme.Spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: theme.Colors.cardBorder,
+  },
+  totalLabel: {
+    color: theme.Colors.white,
+  },
+  totalValue: {
+    color: theme.Colors.primary,
   },
   actionButtons: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
     justifyContent: 'space-between',
+    gap: theme.Spacing.xs,
+    marginBottom: theme.Spacing.sm,
   },
-  cancelButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#ef4444',
+  actionButton: {
+    flex: 1,
+    borderRadius: theme.BorderRadius.sm,
+    overflow: 'hidden',
   },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#ef4444',
-  },
-  trackButton: {
+  actionButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#007bff',
-    borderRadius: 6,
+    justifyContent: 'center',
+    paddingVertical: theme.Spacing.sm,
+    gap: theme.Spacing.xs,
   },
-  trackButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'white',
-    marginLeft: 4,
+  actionButtonText: {
+    color: theme.Colors.white,
+    fontSize: 12,
+  },
+  reorderButton: {
+    borderRadius: theme.BorderRadius.sm,
+    overflow: 'hidden',
+  },
+  reorderGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.Spacing.md,
+    gap: theme.Spacing.xs,
+  },
+  reorderText: {
+    color: theme.Colors.white,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingMainText: {
+    marginTop: theme.Spacing.sm,
+    color: theme.Colors.textSecondary,
+  },
   loadingFooter: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: theme.Spacing.lg,
   },
   loadingText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
+    color: theme.Colors.textSecondary,
+    marginLeft: theme.Spacing.xs,
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: theme.Spacing.xl,
+    minHeight: 500,
+  },
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.Spacing.lg,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
+    color: theme.Colors.white,
+    marginBottom: theme.Spacing.sm,
   },
   emptyMessage: {
-    fontSize: 14,
-    color: '#666',
+    color: theme.Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
+    lineHeight: 24,
+    marginBottom: theme.Spacing.xl,
   },
   shopButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: '#007bff',
-    borderRadius: 8,
+    borderRadius: theme.BorderRadius.round,
+    overflow: 'hidden',
+    width: '100%',
+    marginBottom: theme.Spacing.sm,
+  },
+  buttonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.Spacing.md,
+    paddingHorizontal: theme.Spacing.lg,
+    gap: theme.Spacing.xs,
   },
   shopButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
+    color: theme.Colors.white,
+  },
+  exploreButton: {
+    paddingVertical: theme.Spacing.sm,
+  },
+  exploreButtonText: {
+    color: theme.Colors.primary,
+    fontWeight: '500',
   },
 });
 
