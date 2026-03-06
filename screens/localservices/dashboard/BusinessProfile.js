@@ -23,13 +23,16 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import axios from 'axios';
+import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import Theme from '../../theme/Theme';
 
 const { Colors, Typography, Spacing, BorderRadius, Shadows } = Theme;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const BusinessProfile = () => {
+const BusinessProfile = ({ navigation: navProp }) => {
+  const navHook = useNavigation();
+  const navigation = navProp || navHook;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -39,10 +42,9 @@ const BusinessProfile = () => {
   const [showSocialModal, setShowSocialModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(false);
-  const [imageType, setImageType] = useState(''); // 'profile' or 'cover'
+  const [imageType, setImageType] = useState('');
   const [currentLocation, setCurrentLocation] = useState(null);
-
-  // Form states
+  
   const [formData, setFormData] = useState({
     businessName: '',
     description: '',
@@ -120,7 +122,6 @@ const BusinessProfile = () => {
       const response = await axios.get('/api/services/dashboard/profile');
       setProfileData(response.data);
       
-      // Populate form data
       if (response.data) {
         setFormData({
           businessName: response.data.businessName || '',
@@ -152,119 +153,115 @@ const BusinessProfile = () => {
     }
   };
 
-const pickImage = async () => {
-  try {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Camera roll permissions are required.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: imageType === 'cover' ? [16, 9] : [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const success = await uploadImage(result.assets[0]);
-      if (success) {
-        setShowImagePicker(false);
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera roll permissions are required.');
+        return;
       }
-    }
-  } catch (error) {
-    console.error('Image picker error:', error);
-    Alert.alert('Error', 'Failed to pick image');
-  }
-};
 
-const takePhoto = async () => {
-  try {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Camera permissions are required.');
-      return;
-    }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: imageType === 'cover' ? [16, 9] : [1, 1],
+        quality: 0.8,
+      });
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: imageType === 'cover' ? [16, 9] : [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const success = await uploadImage(result.assets[0]);
-      if (success) {
-        setShowImagePicker(false);
+      if (!result.canceled && result.assets[0]) {
+        const success = await uploadImage(result.assets[0]);
+        if (success) {
+          setShowImagePicker(false);
+        }
       }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Error', 'Failed to pick image');
     }
-  } catch (error) {
-    console.error('Camera error:', error);
-    Alert.alert('Error', 'Failed to take photo');
-  }
-};
+  };
 
-const uploadImage = async (imageAsset) => {
-  try {
-    setUploadingImage(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera permissions are required.');
+        return;
+      }
 
-    const formData = new FormData();
-    
-    // Extract filename and type properly
-    const filename = imageAsset.uri.split('/').pop();
-    const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : 'image/jpeg';
-    
-    // Append the file correctly for React Native
-    formData.append('image', {
-      uri: Platform.OS === 'ios' ? imageAsset.uri.replace('file://', '') : imageAsset.uri,
-      name: filename || `${imageType}-image.jpg`,
-      type: type,
-    });
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: imageType === 'cover' ? [16, 9] : [1, 1],
+        quality: 0.8,
+      });
 
-    const endpoint = imageType === 'profile' 
-      ? '/api/services/dashboard/profile/profile-image'
-      : '/api/services/dashboard/profile/cover-image';
+      if (!result.canceled && result.assets[0]) {
+        const success = await uploadImage(result.assets[0]);
+        if (success) {
+          setShowImagePicker(false);
+        }
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      Alert.alert('Error', 'Failed to take photo');
+    }
+  };
 
-    const response = await axios.put(endpoint, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+  const uploadImage = async (imageAsset) => {
+    try {
+      setUploadingImage(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    if (response.data.success) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', response.data.message || 'Image updated successfully');
+      const formData = new FormData();
       
-      // Update local state immediately
-      if (imageType === 'profile') {
-        setProfileData(prev => ({ ...prev, profileImage: response.data.profileImage }));
-      } else {
-        setProfileData(prev => ({ ...prev, coverImage: response.data.coverImage }));
+      const filename = imageAsset.uri.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      
+      formData.append('image', {
+        uri: Platform.OS === 'ios' ? imageAsset.uri.replace('file://', '') : imageAsset.uri,
+        name: filename || `${imageType}-image.jpg`,
+        type: type,
+      });
+
+      const endpoint = imageType === 'profile' 
+        ? '/api/services/dashboard/profile/profile-image'
+        : '/api/services/dashboard/profile/cover-image';
+
+      const response = await axios.put(endpoint, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Success', response.data.message || 'Image updated successfully');
+        
+        if (imageType === 'profile') {
+          setProfileData(prev => ({ ...prev, profileImage: response.data.profileImage }));
+        } else {
+          setProfileData(prev => ({ ...prev, coverImage: response.data.coverImage }));
+        }
+        
+        return true;
+      }
+    } catch (error) {
+      console.error('Upload image error:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      
+      let errorMessage = 'Failed to upload image';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message === 'Network Error') {
+        errorMessage = 'Network error. Please check your connection.';
       }
       
-      return true;
+      Alert.alert('Error', errorMessage);
+      return false;
+    } finally {
+      setUploadingImage(false);
     }
-  } catch (error) {
-    console.error('Upload image error:', error);
-    console.error('Error details:', error.response?.data);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    
-    let errorMessage = 'Failed to upload image';
-    if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    } else if (error.message === 'Network Error') {
-      errorMessage = 'Network error. Please check your connection.';
-    }
-    
-    Alert.alert('Error', errorMessage);
-    return false;
-  } finally {
-    setUploadingImage(false);
-  }
-};
+  };
 
   const handleSaveProfile = async () => {
     if (!formData.businessName.trim()) {
@@ -395,7 +392,6 @@ const uploadImage = async (imageAsset) => {
     return !hoursData[day].open && !hoursData[day].close;
   };
 
-  // New function to open maps with the location
   const openLocationInMaps = () => {
     if (!locationData.address && locationData.latitude === 0 && locationData.longitude === 0) {
       Alert.alert('No Location', 'Please add a location first');
@@ -524,6 +520,22 @@ const uploadImage = async (imageAsset) => {
         </Text>
       </View>
 
+      <TouchableOpacity 
+        style={styles.reviewsButton}
+        onPress={() => navigation.navigate('ReviewsManagement')}
+        activeOpacity={0.7}
+      >
+        <View style={styles.reviewsButtonContent}>
+          <View style={styles.reviewsButtonLeft}>
+            <Ionicons name="star" size={24} color={Colors.warning} />
+            <View>
+              <Text style={styles.reviewsButtonTitle}>Manage Reviews</Text>
+            </View>
+          </View>
+          <Ionicons name="arrow-forward" size={24} color={Colors.primary} />
+        </View>
+      </TouchableOpacity>
+
       <View style={styles.infoSection}>
         <View style={styles.sectionHeader}>
           <Ionicons name="location" size={20} color={Colors.primary} />
@@ -620,81 +632,87 @@ const uploadImage = async (imageAsset) => {
     </View>
   );
 
-  const renderEditModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={showEditModal}
-      onRequestClose={() => setShowEditModal(false)}
+const renderEditModal = () => (
+  <Modal
+    animationType="slide"
+    transparent={true}
+    visible={showEditModal}
+    onRequestClose={() => setShowEditModal(false)}
+  >
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.modalOverlay}
     >
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalOverlay}
-      >
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Edit Business Profile</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Business Name *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={formData.businessName}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, businessName: text }))}
-              placeholder="Enter your business name"
-              placeholderTextColor={Colors.textTertiary}
-            />
-          </View>
+      <View style={styles.modalContainer}>
+        <Text style={styles.modalTitle}>Edit Business Info</Text>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Description</Text>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              value={formData.description}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
-              placeholder="Describe your business..."
-              placeholderTextColor={Colors.textTertiary}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+        {/* Read-only name section */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Business Name</Text>
+          <View style={styles.readOnlyField}>
+            <Text style={styles.readOnlyText}>
+              {profileData?.businessName || 'Your Business Name'}
+            </Text>
+            <View style={styles.readOnlyBadge}>
+              <Ionicons name="shield-checkmark" size={14} color={Colors.primary} />
+              <Text style={styles.readOnlyBadgeText}>Verified</Text>
+            </View>
           </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Location</Text>
-            <TextInput
-              style={styles.textInput}
-              value={formData.location}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))}
-              placeholder="Business address"
-              placeholderTextColor={Colors.textTertiary}
-            />
-          </View>
-
-          <View style={styles.modalActions}>
-            <TouchableOpacity 
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={() => setShowEditModal(false)}
-              disabled={saving}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.modalButton, styles.saveButton]}
-              onPress={handleSaveProfile}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color={Colors.white} />
-              ) : (
-                <Text style={styles.saveButtonText}>Save Changes</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.readOnlyHint}>
+            Business name is set by admin and cannot be changed here.
+          </Text>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Description</Text>
+          <TextInput
+            style={[styles.textInput, styles.textArea]}
+            value={formData.description}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
+            placeholder="Describe your business..."
+            placeholderTextColor={Colors.textTertiary}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Location</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.location}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))}
+            placeholder="Business address"
+            placeholderTextColor={Colors.textTertiary}
+          />
+        </View>
+
+        <View style={styles.modalActions}>
+          <TouchableOpacity 
+            style={[styles.modalButton, styles.cancelButton]}
+            onPress={() => setShowEditModal(false)}
+            disabled={saving}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.modalButton, styles.saveButton]}
+            onPress={handleSaveProfile}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color={Colors.white} />
+            ) : (
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  </Modal>
+);
 
   const renderHoursModal = () => (
     <Modal
@@ -914,7 +932,6 @@ const uploadImage = async (imageAsset) => {
             )}
           </View>
 
-          {/* REPLACED MapView with location preview */}
           {(locationData.latitude !== 0 || locationData.longitude !== 0) && (
             <View style={styles.locationPreviewContainer}>
               <View style={styles.locationPreview}>
@@ -1030,7 +1047,6 @@ const uploadImage = async (imageAsset) => {
         {renderInfoCard()}
       </ScrollView>
 
-      {/* Modals */}
       {renderEditModal()}
       {renderHoursModal()}
       {renderSocialModal()}
@@ -1059,7 +1075,31 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: Spacing.md,
   },
-  // Cover Image
+  reviewsButton: {
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.primary + '40',
+    ...Shadows.medium,
+  },
+  reviewsButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  reviewsButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  reviewsButtonTitle: {
+    ...Typography.h3,
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: '600',
+  },
   coverImageContainer: {
     height: 200,
     position: 'relative',
@@ -1090,7 +1130,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Shadows.small,
   },
-  // Profile Image
   profileImageContainer: {
     marginTop: -60,
     paddingHorizontal: Spacing.lg,
@@ -1125,11 +1164,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.background,
   },
-
-  // Info Card
   infoCard: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: 100, // Increase this for bottom navigation
+    paddingBottom: 100,
   },
   infoHeader: {
     marginBottom: Spacing.lg,
@@ -1156,7 +1193,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 22,
   },
-  // Info Sections
   infoSection: {
     backgroundColor: Colors.card,
     borderRadius: BorderRadius.lg,
@@ -1188,6 +1224,43 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: Spacing.sm,
   },
+  readOnlyField: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  backgroundColor: Colors.card,
+  borderRadius: BorderRadius.md,
+  padding: Spacing.md,
+  borderWidth: 1,
+  borderColor: Colors.cardBorder,
+  opacity: 0.7,
+},
+readOnlyText: {
+  ...Typography.body,
+  color: Colors.textSecondary,
+  flex: 1,
+  fontWeight: '600',
+},
+readOnlyBadge: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: Colors.primary + '20',
+  paddingHorizontal: Spacing.sm,
+  paddingVertical: 3,
+  borderRadius: BorderRadius.sm,
+  gap: 4,
+},
+readOnlyBadgeText: {
+  fontSize: 11,
+  color: Colors.primary,
+  fontWeight: '600',
+},
+readOnlyHint: {
+  ...Typography.caption,
+  color: Colors.textSecondary,
+  marginTop: Spacing.xs,
+  fontStyle: 'italic',
+},
   hoursText: {
     ...Typography.body,
     color: Colors.text,
@@ -1236,7 +1309,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontStyle: 'italic',
   },
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1251,7 +1323,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     maxHeight: '80%',
-    marginBottom: 70, // ADD THIS LINE for bottom navigation spacing
+    marginBottom: 70,
   },
   modalTitle: {
     ...Typography.h3,
@@ -1281,7 +1353,6 @@ const styles = StyleSheet.create({
     minHeight: 100,
     textAlignVertical: 'top',
   },
-  // Hours Modal
   hoursRow: {
     marginBottom: Spacing.lg,
     paddingBottom: Spacing.md,
@@ -1333,7 +1404,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: Spacing.md,
   },
-  // Social Modal
   socialInputGroup: {
     marginBottom: Spacing.lg,
   },
@@ -1348,7 +1418,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: Spacing.sm,
   },
-  // Location Modal - Updated Styles
   coordinateInputs: {
     flexDirection: 'row',
     gap: Spacing.md,
@@ -1388,7 +1457,6 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '600',
   },
-  // Location Preview (replaces MapView)
   locationPreviewContainer: {
     marginTop: Spacing.md,
   },
@@ -1439,7 +1507,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  // Modal Actions
   modalActions: {
     flexDirection: 'row',
     gap: Spacing.md,
@@ -1467,7 +1534,6 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '600',
   },
-  // Image Picker Modal
   imagePickerOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1478,7 +1544,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: BorderRadius.lg,
     borderTopRightRadius: BorderRadius.lg,
     padding: Spacing.lg,
-    paddingBottom: 70, // ADD THIS LINE for bottom navigation spacing
+    paddingBottom: 70,
   },
   imagePickerTitle: {
     ...Typography.h3,

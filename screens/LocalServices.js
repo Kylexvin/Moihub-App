@@ -376,97 +376,58 @@ const renderChatMessage = (msg, index) => {
     );
   }
   
-  return (
-    <View key={index} style={styles.botMessageContainer}>
-      <View style={styles.botMessage}>
-        {/* Main Message Text */}
-        <Text style={styles.botMessageText}>{msg.text}</Text>
-        
-        {/* Understanding Summary Box - Shows what AI extracted */}
-        {msg.understood && (
-          <View style={styles.understoodBox}>
-            <View style={styles.understoodHeader}>
-              <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-              <Text style={styles.understoodTitle}>I understood:</Text>
-            </View>
-            
-            <View style={styles.understoodItems}>
-              <View style={styles.understoodItem}>
-                <Text style={styles.understoodLabel}>Service:</Text>
-                <Text style={styles.understoodValue}>{msg.understood.service || 'Any'}</Text>
-              </View>
-              
-              {msg.understood.location !== 'Any location' && (
-                <View style={styles.understoodItem}>
-                  <Text style={styles.understoodLabel}>Location:</Text>
-                  <Text style={styles.understoodValue}>{msg.understood.location}</Text>
-                </View>
-              )}
-              
-              {msg.understood.priceRange !== 'Any price' && (
-                <View style={styles.understoodItem}>
-                  <Text style={styles.understoodLabel}>Price:</Text>
-                  <Text style={styles.understoodValue}>{msg.understood.priceRange}</Text>
-                </View>
-              )}
-              
-              {msg.understood.minRating && (
-                <View style={styles.understoodItem}>
-                  <Text style={styles.understoodLabel}>Rating:</Text>
-                  <Text style={styles.understoodValue}>{msg.understood.minRating}+ stars</Text>
-                </View>
-              )}
-              
-              {msg.understood.urgency !== 'Flexible' && (
-                <View style={styles.understoodItem}>
-                  <Text style={styles.understoodLabel}>When:</Text>
-                  <Text style={styles.understoodValue}>{msg.understood.urgency}</Text>
-                </View>
-              )}
-            </View>
+return (
+  <View key={index} style={styles.botMessageContainer}>
+    <View style={styles.botMessage}>
+      <Text style={styles.botMessageText}>{msg.text}</Text>
+      
+      {msg.understood && msg.understood.location !== 'Any location' && (
+        <View style={styles.understoodBox}>
+          <View style={styles.understoodHeader}>
+            <Ionicons name="location" size={14} color={Colors.primary} />
+            <Text style={styles.understoodTitle}>Searching near {msg.understood.location}</Text>
           </View>
-        )}
-        
-        {/* Provider Cards */}
-        {msg.cards && msg.cards.length > 0 && (
-          <View style={styles.cardsContainer}>
-            <View style={styles.cardsHeader}>
-              <Ionicons name="business" size={16} color={Colors.primary} />
-              <Text style={styles.cardsTitle}>
-                {msg.cards.length} provider{msg.cards.length > 1 ? 's' : ''} found
-              </Text>
-            </View>
-            {msg.cards.map(card => renderProviderCard(card))}
+        </View>
+      )}
+      
+      {msg.cards && msg.cards.length > 0 && (
+        <View style={styles.cardsContainer}>
+          <View style={styles.cardsHeader}>
+            <Ionicons name="business" size={16} color={Colors.primary} />
+            <Text style={styles.cardsTitle}>
+              {msg.cards.length} provider{msg.cards.length > 1 ? 's' : ''} found
+            </Text>
           </View>
-        )}
-        
-        {/* Suggestion Chips */}
-        {msg.suggestions && msg.suggestions.length > 0 && (
-          <View style={styles.suggestionsContainer}>
-            <View style={styles.suggestionsHeader}>
-              <Ionicons name="bulb" size={14} color="#F59E0B" />
-              <Text style={styles.suggestionsTitle}>Try asking:</Text>
-            </View>
-            <View style={styles.suggestionChips}>
-              {msg.suggestions.map((suggestion, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={styles.suggestionChip}
-                  onPress={() => handleSuggestion(suggestion)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="arrow-forward-circle" size={14} color={Colors.primary} />
-                  <Text style={styles.suggestionText}>{suggestion}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+          {msg.cards.map(card => renderProviderCard(card))}
+        </View>
+      )}
+      
+      {msg.suggestions && msg.suggestions.length > 0 && (
+        <View style={styles.suggestionsContainer}>
+          <View style={styles.suggestionsHeader}>
+            <Ionicons name="bulb" size={14} color="#F59E0B" />
+            <Text style={styles.suggestionsTitle}>Try asking:</Text>
           </View>
-        )}
-      </View>
+          <View style={styles.suggestionChips}>
+            {msg.suggestions.map((suggestion, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.suggestionChip}
+                onPress={() => handleSuggestion(suggestion)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-forward-circle" size={14} color={Colors.primary} />
+                <Text style={styles.suggestionText}>{suggestion}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
     </View>
-  );
+  </View>
+);
 };
-
+ 
   // ============== RENDER AI CHAT MODAL ==============
   const renderAIChatModal = () => (
     <Modal
@@ -551,8 +512,7 @@ const renderChatMessage = (msg, index) => {
     </Modal>
   );
 
-  // ============== EXISTING DATA FUNCTIONS (YOUR CODE, UNCHANGED) ==============
-  useEffect(() => {
+ useEffect(() => {
     const initDatabase = async () => {
       try {
         await localServicesDB.init();
@@ -1072,13 +1032,13 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   scrollContent: {
-    paddingBottom: Spacing.xxxl,
+    paddingBottom: 0,
   },
   
   // Header Styles
   headerContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl + Spacing.md,
+    paddingTop: 0,
     paddingBottom: Spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1140,7 +1100,7 @@ const styles = StyleSheet.create({
   matchScoreContainer: {
     marginTop: 8,
     marginBottom: 8,
-  },
+  }, 
   matchScoreBackground: {
     height: 4,
     backgroundColor: '#E5E7EB',

@@ -2,6 +2,8 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import ServiceProviderDashboard from '../screens/localservices/dashboard/ServiceProviderDashboard';
+import BusinessProfile from '../screens/localservices/dashboard/BusinessProfile';
+import ReviewsManagement from '../screens/localservices/dashboard/ReviewsManagement';
 
 const Stack = createStackNavigator();
 
@@ -9,7 +11,7 @@ const ServiceProviderDashboardNavigator = () => {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerShown: false, // This hides ALL headers in this navigator
+        headerShown: false,
         cardStyle: { backgroundColor: '#093028' },
         animationEnabled: true,
       }}
@@ -17,7 +19,16 @@ const ServiceProviderDashboardNavigator = () => {
       <Stack.Screen 
         name="ServiceProviderDashboard" 
         component={ServiceProviderDashboard}
-        // You can also set headerShown: false on individual screen if needed
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="BusinessProfile" 
+        component={BusinessProfile}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="ReviewsManagement" 
+        component={ReviewsManagement}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
