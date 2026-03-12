@@ -19,6 +19,7 @@ const WhatsAppChannelFAB = () => {
   );
 };
 
+
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
